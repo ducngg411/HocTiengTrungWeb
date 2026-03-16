@@ -309,7 +309,7 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
                     >
                         <div
                             className={`absolute inset-0 flex flex-col items-center justify-center rounded-2xl p-6 bg-white dark:bg-slate-800 ${flipped ? "pointer-events-none" : ""}`}
-                            style={{ backfaceVisibility: "hidden" }}
+                            style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "translateZ(1px)" }}
                         >
                             <div className="absolute inset-0 opacity-5 pointer-events-none bg-gradient-to-br from-primary to-transparent rounded-2xl"></div>
 
@@ -333,7 +333,8 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
                             className={`absolute inset-0 overflow-y-auto rounded-2xl p-6 text-left flex flex-col pt-12 ${!flipped ? "pointer-events-none" : ""}`}
                             style={{
                                 backfaceVisibility: "hidden",
-                                transform: "rotateY(180deg)",
+                                WebkitBackfaceVisibility: "hidden",
+                                transform: "rotateY(180deg) translateZ(1px)",
                                 backgroundColor: isDragging ? "transparent" : (typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? "#1e293b" : "#ffffff")
                             }}
                         >
