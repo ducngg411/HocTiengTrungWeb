@@ -596,18 +596,6 @@ export default function StudyDeckPage() {
                                     </div>
                                     <span className="text-xs font-bold text-red-500 uppercase tracking-wider">Hard</span>
                                 </button>
-                                
-                                <button
-                                    type="button"
-                                    onClick={nextCard}
-                                    disabled={isSubmittingReview}
-                                    className="flex flex-col items-center gap-2 group disabled:opacity-50 px-4"
-                                >
-                                    <div className="w-12 h-12 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 transition-all group-hover:bg-slate-200 dark:group-hover:bg-slate-700 group-active:scale-95 shadow-sm">
-                                        <span className="material-symbols-outlined">skip_next</span>
-                                    </div>
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Skip</span>
-                                </button>
 
                                 <button
                                     type="button"

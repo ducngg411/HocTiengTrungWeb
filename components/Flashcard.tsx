@@ -2,6 +2,7 @@
 
 import { MouseEvent, PointerEvent, TouchEvent, useEffect, useRef, useState } from "react";
 import AudioButton from "@/components/AudioButton";
+import HanziWritingPractice from "@/components/HanziWritingPractice";
 
 export type VocabItem = {
     hanzi: string;
@@ -32,6 +33,7 @@ type FlashcardProps = {
 
 export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipeRight, isFlippingDisabled }: FlashcardProps) {
     const [flipped, setFlipped] = useState(false);
+    const [showWriting, setShowWriting] = useState(false);
     const [dragOffsetX, setDragOffsetX] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const [flyOutDirection, setFlyOutDirection] = useState<"left" | "right" | null>(null);
@@ -40,6 +42,39 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
     const pointerStartX = useRef<number | null>(null);
     const pointerStartY = useRef<number | null>(null);
     const suppressClick = useRef(false);
+    const cardRef = useRef<HTMLDivElement>(null);
+
+    // Dùng native event listener để có thể preventDefault() mượt mà trên iOS Safari,
+    // chặn trình duyệt vuốt qua lại (ví dụ gesture "Back") khi đang vuốt thẻ.
+    useEffect(() => {
+        const card = cardRef.current;
+        if (!card) return;
+
+        const handleNativeTouchMove = (e: globalThis.TouchEvent) => {
+            if (touchStartX.current === null || touchStartY.current === null) return;
+
+            const currentX = e.touches[0]?.clientX;
+            const currentY = e.touches[0]?.clientY;
+
+            if (currentX === undefined || currentY === undefined) return;
+
+            const deltaX = Math.abs(currentX - touchStartX.current);
+            const deltaY = Math.abs(currentY - touchStartY.current);
+
+            // Nếu hướng vuốt ngang nhiều hơn dọc và khoảng cách đủ lớn
+            if (deltaX > deltaY && deltaX > 5) {
+                if (e.cancelable) {
+                    e.preventDefault(); // Chặn scroll và gesture vuốt mép màn hình của trình duyệt
+                }
+            }
+        };
+
+        card.addEventListener("touchmove", handleNativeTouchMove, { passive: false });
+
+        return () => {
+            card.removeEventListener("touchmove", handleNativeTouchMove);
+        };
+    }, []);
 
     useEffect(() => {
         setFlipped(false);
@@ -75,7 +110,16 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
     };
 
     const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
-        touchStartX.current = event.touches[0]?.clientX ?? null;
+        const x = event.touches[0]?.clientX;
+        
+        // Bỏ qua nếu bắt đầu chạm ở sát 30px mép trái/phải màn hình 
+        // để không cản trở thao tác vuốt Back mặc định của iOS khi users cần.
+        if (x !== undefined && (x < 30 || x > window.innerWidth - 30)) {
+            touchStartX.current = null;
+            return;
+        }
+
+        touchStartX.current = x ?? null;
         touchStartY.current = event.touches[0]?.clientY ?? null;
         suppressClick.current = false;
         setFlyOutDirection(null);
@@ -126,12 +170,6 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
 
         if (deltaX < -40 && onSwipeRight) {
             animateFlyOut("right");
-            return true;
-        }
-
-        if (Math.abs(deltaX) > 40 && onNext) {
-            setDragOffsetX(0);
-            onNext();
             return true;
         }
 
@@ -240,7 +278,17 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
         <article className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-slate-500">Thẻ Từ</p>
-                <AudioButton text={item.hanzi} />
+                <div className="flex items-center gap-2" data-no-flip="true" onClick={e => e.stopPropagation()}>
+                    <button
+                        type="button"
+                        className={`flex items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50 transition-colors ${showWriting ? "border-primary/60 text-primary bg-primary/5" : ""}`}
+                        onClick={() => setShowWriting(true)}
+                    >
+                        <span className="material-symbols-outlined text-base mr-1">edit</span>
+                        Viết
+                    </button>
+                    <AudioButton text={item.hanzi} />
+                </div>
             </div>
 
             <div className="relative mt-4">
@@ -272,6 +320,7 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
                 </div>
 
                 <div
+                    ref={cardRef}
                     role="button"
                     tabIndex={0}
                     onClick={handleClick}
@@ -367,6 +416,39 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
                     </div>
                 </div>
             </div>
+
+            {showWriting && (
+                <div
+                    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+                    data-no-flip="true"
+                    onClick={() => setShowWriting(false)}
+                >
+                    <div
+                        className="w-full max-w-xl mx-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-700/70 shadow-2xl p-4 sm:p-5"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                    Luyện viết ký tự
+                                </span>
+                                <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                                    {item.hanzi}
+                                </span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowWriting(false)}
+                                className="inline-flex items-center justify-center rounded-full p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            >
+                                <span className="material-symbols-outlined text-xl">close</span>
+                            </button>
+                        </div>
+
+                        <HanziWritingPractice hanzi={item.hanzi} />
+                    </div>
+                </div>
+            )}
         </article>
     );
 }

@@ -10,6 +10,7 @@
     "migrate:remove-spaced-repetition": "node --env-file=.env.local scripts/remove-spaced-repetition-fields.mjs"
   },
   "dependencies": {
+    "hanzi-writer": "^3.7.3",
     "mongoose": "^8.23.0",
     "next": "16.1.6",
     "react": "19.2.3",
