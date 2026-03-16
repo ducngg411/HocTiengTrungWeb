@@ -13,7 +13,8 @@ export default function AudioButton({ text, lang = "zh-CN" }: AudioButtonProps) 
         []
     );
 
-    const playAudio = () => {
+    const playAudio = (event?: React.MouseEvent<HTMLButtonElement>) => {
+        event?.stopPropagation();
         if (!supported || !text.trim()) return;
 
         const utterance = new SpeechSynthesisUtterance(text);

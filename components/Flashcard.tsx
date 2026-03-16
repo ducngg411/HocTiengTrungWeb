@@ -40,7 +40,7 @@ export default function Flashcard({ item, onNext }: FlashcardProps) {
     return (
         <article className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-slate-500">Flashcard</p>
+                <p className="text-sm font-medium text-slate-500">Thẻ Từ</p>
                 <AudioButton text={item.hanzi} />
             </div>
 
@@ -65,23 +65,26 @@ export default function Flashcard({ item, onNext }: FlashcardProps) {
                     >
                         <p className="text-7xl font-semibold tracking-wide text-slate-900">{item.hanzi}</p>
                         <p className="mt-4 text-xl font-medium text-slate-600">{item.pinyin}</p>
-                        <p className="mt-4 text-sm text-slate-500">Tap to flip • Swipe to next</p>
+                        <p className="mt-4 text-sm text-slate-500">Chạm để lật thẻ • Vuốt để sang thẻ tiếp</p>
                     </div>
 
                     <div
                         className="absolute inset-0 overflow-y-auto rounded-xl bg-white p-6 text-left"
                         style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
                     >
-                        <p className="text-sm font-medium uppercase tracking-wide text-slate-500">Meaning</p>
+                        <p className="text-sm font-medium uppercase tracking-wide text-slate-500">Nghĩa</p>
                         <p className="mt-1 text-lg text-teal-700">{item.meaning}</p>
 
-                        <p className="mt-4 text-sm font-medium uppercase tracking-wide text-slate-500">Example</p>
+                        <div className="mt-4 flex items-center justify-between gap-3">
+                            <p className="text-sm font-medium uppercase tracking-wide text-slate-500">Ví Dụ</p>
+                            {item.example.trim() ? <AudioButton text={item.example} /> : null}
+                        </div>
                         <p className="mt-1 text-base text-slate-800">{item.example}</p>
 
-                        <p className="mt-4 text-sm font-medium uppercase tracking-wide text-slate-500">Example Pinyin</p>
+                        <p className="mt-4 text-sm font-medium uppercase tracking-wide text-slate-500">Phiên Âm Ví Dụ</p>
                         <p className="mt-1 text-base text-slate-700">{item.examplePinyin}</p>
 
-                        <p className="mt-4 text-sm font-medium uppercase tracking-wide text-slate-500">Example Meaning</p>
+                        <p className="mt-4 text-sm font-medium uppercase tracking-wide text-slate-500">Nghĩa Ví Dụ</p>
                         <p className="mt-1 text-base text-slate-700">{item.exampleMeaning}</p>
                     </div>
                 </div>

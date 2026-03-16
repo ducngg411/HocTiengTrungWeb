@@ -26,7 +26,7 @@ export default function QuizCard({
         <article className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-sm font-medium text-slate-500">Quiz</p>
+                    <p className="text-sm font-medium text-slate-500">Trắc Nghiệm</p>
                     <p className="mt-1 text-3xl font-semibold text-slate-900">{question.hanzi}</p>
                     <p className="text-base text-slate-600">{question.pinyin}</p>
                 </div>

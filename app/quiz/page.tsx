@@ -64,22 +64,22 @@ export default function QuizPage() {
     return (
         <main className="mx-auto min-h-screen w-full max-w-xl px-4 py-8 sm:px-6">
             <header className="mb-5">
-                <h1 className="text-2xl font-bold text-slate-900">Chinese Quiz</h1>
-                <p className="mt-1 text-sm text-slate-600">Choose the English meaning for each Chinese word.</p>
+                <h1 className="text-2xl font-bold text-slate-900">Trắc Nghiệm Tiếng Trung</h1>
+                <p className="mt-1 text-sm text-slate-600">Chọn đáp án nghĩa tiếng Anh đúng cho mỗi từ tiếng Trung.</p>
             </header>
 
             {finished ? (
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
-                    <h2 className="text-xl font-semibold text-slate-900">Finished</h2>
+                    <h2 className="text-xl font-semibold text-slate-900">Hoàn Thành</h2>
                     <p className="mt-2 text-base text-slate-700">
-                        Score: {score} / {questions.length}
+                        Điểm: {score} / {questions.length}
                     </p>
                     <button
                         type="button"
                         onClick={restart}
                         className="mt-5 rounded-xl border border-teal-600 bg-teal-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-teal-700"
                     >
-                        Try Again
+                        Làm Lại
                     </button>
                 </section>
             ) : (
@@ -99,7 +99,7 @@ export default function QuizPage() {
                                 disabled={!selectedAnswer}
                                 className="w-full rounded-xl border border-teal-600 bg-teal-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                Check Answer
+                                Kiểm Tra Đáp Án
                             </button>
                         ) : (
                             <button
@@ -107,13 +107,13 @@ export default function QuizPage() {
                                 onClick={next}
                                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                             >
-                                {index === questions.length - 1 ? "See Score" : "Next Question"}
+                                {index === questions.length - 1 ? "Xem Điểm" : "Câu Tiếp Theo"}
                             </button>
                         )}
                     </div>
 
                     <p className="mt-3 text-center text-sm text-slate-500">
-                        Question {index + 1} / {questions.length}
+                        Câu {index + 1} / {questions.length}
                     </p>
                 </>
             )}

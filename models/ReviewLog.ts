@@ -1,0 +1,65 @@
+import { model, models, Schema, type InferSchemaType } from "mongoose";
+
+const reviewLogSchema = new Schema(
+    {
+        userId: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+            index: true,
+        },
+        deckId: {
+            type: Schema.Types.ObjectId,
+            ref: "Deck",
+            required: true,
+            index: true,
+        },
+        cardId: {
+            type: Schema.Types.ObjectId,
+            ref: "Card",
+            required: true,
+            index: true,
+        },
+        grade: {
+            type: String,
+            enum: ["hard", "good", "easy"],
+            required: true,
+        },
+        studySeconds: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
+        reviewedAt: {
+            type: Date,
+            required: true,
+            default: Date.now,
+            index: true,
+        },
+        easeFactorAfter: {
+            type: Number,
+            required: true,
+        },
+        intervalDaysAfter: {
+            type: Number,
+            required: true,
+        },
+        statusAfter: {
+            type: String,
+            enum: ["new", "learning", "mastered"],
+            required: true,
+        },
+    },
+    {
+        timestamps: true,
+    }
+);
+
+reviewLogSchema.index({ userId: 1, reviewedAt: -1 });
+reviewLogSchema.index({ userId: 1, deckId: 1, reviewedAt: -1 });
+
+export type ReviewLogDocument = InferSchemaType<typeof reviewLogSchema>;
+
+const ReviewLog = models.ReviewLog || model("ReviewLog", reviewLogSchema);
+
+export default ReviewLog;
