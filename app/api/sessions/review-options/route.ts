@@ -73,7 +73,8 @@ export async function GET(request: Request) {
                 firstLearnedAt: { $gte: todayStart, $lt: tomorrowStart },
             })
                 .select("cardId")
-                .lean(),
+                .lean()
+                .exec(),
 
             UserCardProgress.find({
                 userId: user._id,
@@ -81,13 +82,15 @@ export async function GET(request: Request) {
                 firstLearnedAt: { $gte: yesterdayStart, $lt: todayStart },
             })
                 .select("cardId")
-                .lean(),
+                .lean()
+                .exec(),
 
             // Last session: use reviewedCardIds (actually reviewed), not plannedCardIds
             LearningSession.findOne({ userId: user._id, deckId: deck._id, type: "learn" })
                 .sort({ startedAt: -1 })
                 .select("reviewedCardIds startedAt")
-                .lean(),
+                .lean()
+                .exec(),
         ]);
 
         const progressToday = rawToday as unknown as ProgressRow[];
@@ -135,7 +138,8 @@ export async function GET(request: Request) {
             reviewCount: { $gt: 0 },
         })
             .select("cardId")
-            .lean()) as unknown as { cardId: { toString(): string } }[];
+            .lean()
+            .exec()) as unknown as { cardId: { toString(): string } }[];
 
         const allLearnedCardIds = learnedProgress.map((p) => p.cardId.toString());
 
