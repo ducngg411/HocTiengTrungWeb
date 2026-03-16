@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import Card from "@/models/Card";
 import Deck from "@/models/Deck";
+import LearningSession from "@/models/LearningSession";
 import ReviewLog from "@/models/ReviewLog";
 import User from "@/models/User";
 import UserCardProgress from "@/models/UserCardProgress";
@@ -14,6 +15,7 @@ type ReviewPayload = {
     cardId?: unknown;
     action?: unknown;
     studySeconds?: unknown;
+    sessionId?: unknown;
 };
 
 export async function POST(request: Request) {
@@ -29,6 +31,7 @@ export async function POST(request: Request) {
         const cardId = typeof payload.cardId === "string" ? payload.cardId.trim() : "";
         const action = typeof payload.action === "string" ? payload.action.trim() : "";
         const studySeconds = typeof payload.studySeconds === "number" ? payload.studySeconds : 0;
+        const sessionId = typeof payload.sessionId === "string" ? payload.sessionId.trim() : null;
 
         if (!deckId || !cardId) {
             return NextResponse.json({ error: "deckId and cardId are required" }, { status: 400 });
@@ -59,7 +62,10 @@ export async function POST(request: Request) {
             reviewCount?: number;
             status?: CardStatus;
             totalStudySeconds?: number;
+            firstLearnedAt?: Date | null;
         } | null;
+
+        const isFirstReview = !currentProgress || (currentProgress.reviewCount ?? 0) === 0;
 
         const nextProgress = computeUpdatedCardProgress(
             {
@@ -72,29 +78,49 @@ export async function POST(request: Request) {
             new Date()
         );
 
+        const progressUpdate: Record<string, unknown> = {
+            deckId: deck._id,
+            reviewCount: nextProgress.reviewCount,
+            lastReviewedAt: nextProgress.lastReviewedAt,
+            status: nextProgress.status,
+            totalStudySeconds: nextProgress.totalStudySeconds,
+        };
+
+        // Set firstLearnedAt only on first review
+        if (isFirstReview) {
+            progressUpdate.firstLearnedAt = nextProgress.lastReviewedAt;
+        }
+
         await UserCardProgress.findOneAndUpdate(
             { userId: user._id, cardId: card._id },
-            {
-                $set: {
-                    deckId: deck._id,
-                    reviewCount: nextProgress.reviewCount,
-                    lastReviewedAt: nextProgress.lastReviewedAt,
-                    status: nextProgress.status,
-                    totalStudySeconds: nextProgress.totalStudySeconds,
-                },
-            },
+            { $set: progressUpdate },
             { upsert: true, new: true }
         );
+
+        const roundedStudySeconds = Math.max(0, Math.round(studySeconds));
 
         await ReviewLog.create({
             userId: user._id,
             deckId: deck._id,
             cardId: card._id,
             action,
-            studySeconds: Math.max(0, Math.round(studySeconds)),
+            studySeconds: roundedStudySeconds,
             reviewedAt: nextProgress.lastReviewedAt,
             statusAfter: nextProgress.status,
+            sessionId: sessionId ?? null,
         });
+
+        // Update session stats if sessionId is provided
+        if (sessionId) {
+            await LearningSession.findByIdAndUpdate(sessionId, {
+                $addToSet: { reviewedCardIds: card._id },
+                $inc: {
+                    "stats.hardCount": action === "hard" ? 1 : 0,
+                    "stats.easyCount": action === "easy" ? 1 : 0,
+                    "stats.totalStudySeconds": roundedStudySeconds,
+                },
+            });
+        }
 
         return NextResponse.json({
             cardId,

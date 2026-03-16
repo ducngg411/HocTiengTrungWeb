@@ -5,6 +5,8 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { clearStoredUsername, getStoredUsername } from "@/lib/client-auth";
 import AudioButton from "@/components/AudioButton";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 type ApiError = {
     error?: string;
@@ -59,6 +61,7 @@ export default function PracticeDeckPage() {
     
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const { t } = useLanguage();
     
     // Practice Mode State
     const [selectedMode, setSelectedMode] = useState<PracticeMode | null>(null);
@@ -97,15 +100,15 @@ export default function PracticeDeckPage() {
                 ]);
 
                 const decksPayload = await decksResponse.json();
-                if (!decksResponse.ok || !Array.isArray(decksPayload)) throw new Error("Không thể tải danh sách bộ để xác minh");
+                if (!decksResponse.ok || !Array.isArray(decksPayload)) throw new Error(t("common.error"));
                 
                 const selectedDeck = decksPayload.find((deck: any) => deck.id === deckId);
-                if (!selectedDeck) throw new Error("Không tìm thấy bộ hoặc bạn không có quyền truy cập");
+                if (!selectedDeck) throw new Error(t("study.deckNotFound"));
 
                 setDeckName(selectedDeck.name);
 
                 const cardsPayload = await cardsResponse.json();
-                if (!cardsResponse.ok || !Array.isArray(cardsPayload)) throw new Error("Không thể tải danh sách thẻ");
+                if (!cardsResponse.ok || !Array.isArray(cardsPayload)) throw new Error(t("common.error"));
 
                 const mappedCards = cardsPayload.map((item: CardPayload) => ({
                     id: item.id,
@@ -124,7 +127,7 @@ export default function PracticeDeckPage() {
                 const shuffled = [...mappedCards].sort(() => Math.random() - 0.5);
                 setCards(shuffled);
             } catch (loadError) {
-                const message = loadError instanceof Error ? loadError.message : "Đã có lỗi xảy ra";
+                const message = loadError instanceof Error ? loadError.message : t("common.error");
                 setError(message);
             } finally {
                 setIsLoading(false);
@@ -204,10 +207,11 @@ export default function PracticeDeckPage() {
                             </Link>
                         )}
                         <h2 className="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight max-w-[200px] truncate sm:max-w-xs">
-                            {selectedMode === "writing" ? "Luyện viết" : `Luyện tập: ${deckName}`}
+                            {selectedMode === "writing" ? t("practice.writingModeTitle") : t("practice.practiceDeck", { name: deckName })}
                         </h2>
                     </div>
                     <div className="flex justify-end gap-3 sm:gap-4">
+                        <LanguageSwitcher />
                         <button onClick={handleLogout} className="aspect-square rounded-full size-10 bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center overflow-hidden border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 font-bold transition-opacity hover:opacity-80">
                             {username ? username.charAt(0).toUpperCase() : "U"}
                         </button>
@@ -216,7 +220,7 @@ export default function PracticeDeckPage() {
 
                 {isLoading && (
                     <div className="m-4 rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-600 shadow-sm">
-                        Đang tải chế độ luyện tập...
+                        {t("practice.loading")}
                     </div>
                 )}
 
@@ -229,8 +233,8 @@ export default function PracticeDeckPage() {
                 {!isLoading && !error && !selectedMode && (
                     <main className="flex flex-col flex-1 px-4 py-8 max-w-3xl mx-auto w-full items-center justify-start gap-8">
                         <div className="text-center">
-                            <h1 className="text-3xl font-extrabold text-indigo-950 dark:text-indigo-100 mb-2 mt-4">Practice Modes</h1>
-                            <p className="text-indigo-700/70 dark:text-indigo-300/70 font-medium">Chọn phương pháp luyện tập để củng cố trí nhớ</p>
+                            <h1 className="text-3xl font-extrabold text-indigo-950 dark:text-indigo-100 mb-2 mt-4">{t("practice.title")}</h1>
+                            <p className="text-indigo-700/70 dark:text-indigo-300/70 font-medium">{t("practice.subtitle")}</p>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
@@ -245,36 +249,36 @@ export default function PracticeDeckPage() {
                                 <div className="size-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4">
                                     <span className="material-symbols-outlined text-3xl">edit_square</span>
                                 </div>
-                                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">Luyện Viết</h3>
-                                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Gõ chữ Hán/Pinyin dựa trên nghĩa gốc để ghi nhớ sâu cách viết.</p>
+                                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">{t("practice.modes.writing.title")}</h3>
+                                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">{t("practice.modes.writing.desc")}</p>
                             </button>
 
                             {/* Coming Soon Modes */}
                             <div className="flex flex-col p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent opacity-60 relative overflow-hidden">
-                                <span className="absolute top-4 right-4 bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 text-[10px] font-bold uppercase px-2 py-1 rounded-full">Sắp ra mắt</span>
+                                <span className="absolute top-4 right-4 bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 text-[10px] font-bold uppercase px-2 py-1 rounded-full">{t("practice.comingSoon")}</span>
                                 <div className="size-14 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-400 flex items-center justify-center mb-4">
                                     <span className="material-symbols-outlined text-3xl">view_timeline</span>
                                 </div>
-                                <h3 className="text-xl font-bold text-slate-600 dark:text-slate-300 mb-2">Ghép Câu (Tương lai)</h3>
-                                <p className="text-slate-400 text-sm font-medium">Sắp xếp các từ vựng lại thành một câu hoàn chỉnh.</p>
+                                <h3 className="text-xl font-bold text-slate-600 dark:text-slate-300 mb-2">{t("practice.modes.sentence.title")}</h3>
+                                <p className="text-slate-400 text-sm font-medium">{t("practice.modes.sentence.desc")}</p>
                             </div>
 
                             <div className="flex flex-col p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent opacity-60 relative overflow-hidden">
-                                <span className="absolute top-4 right-4 bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 text-[10px] font-bold uppercase px-2 py-1 rounded-full">Sắp ra mắt</span>
+                                <span className="absolute top-4 right-4 bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 text-[10px] font-bold uppercase px-2 py-1 rounded-full">{t("practice.comingSoon")}</span>
                                 <div className="size-14 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-400 flex items-center justify-center mb-4">
                                     <span className="material-symbols-outlined text-3xl">quiz</span>
                                 </div>
-                                <h3 className="text-xl font-bold text-slate-600 dark:text-slate-300 mb-2">Trắc Nghiệm (Tương lai)</h3>
-                                <p className="text-slate-400 text-sm font-medium">Chọn đáp án đúng theo hình thức Quiz trắc nghiệm ABCD.</p>
+                                <h3 className="text-xl font-bold text-slate-600 dark:text-slate-300 mb-2">{t("practice.modes.quiz.title")}</h3>
+                                <p className="text-slate-400 text-sm font-medium">{t("practice.modes.quiz.desc")}</p>
                             </div>
 
                             <div className="flex flex-col p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent opacity-60 relative overflow-hidden">
-                                <span className="absolute top-4 right-4 bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 text-[10px] font-bold uppercase px-2 py-1 rounded-full">Sắp ra mắt</span>
+                                <span className="absolute top-4 right-4 bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 text-[10px] font-bold uppercase px-2 py-1 rounded-full">{t("practice.comingSoon")}</span>
                                 <div className="size-14 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-400 flex items-center justify-center mb-4">
                                     <span className="material-symbols-outlined text-3xl">headphones</span>
                                 </div>
-                                <h3 className="text-xl font-bold text-slate-600 dark:text-slate-300 mb-2">Luyện Nghe (Tương lai)</h3>
-                                <p className="text-slate-400 text-sm font-medium">Nghe phát âm và điền đáp án dạng dictation (nghe chép chính tả).</p>
+                                <h3 className="text-xl font-bold text-slate-600 dark:text-slate-300 mb-2">{t("practice.modes.listening.title")}</h3>
+                                <p className="text-slate-400 text-sm font-medium">{t("practice.modes.listening.desc")}</p>
                             </div>
                         </div>
                     </main>
@@ -302,7 +306,7 @@ export default function PracticeDeckPage() {
                         <div className="flex flex-col items-center justify-center flex-1 w-full gap-8">
                             
                             <div className="text-center max-w-lg mb-4 flex flex-col items-center gap-3">
-                                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Gõ chính xác nghĩa của</p>
+                                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">{t("practice.writing.prompt")}</p>
                                 <h3 className="text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white leading-tight">
                                     {currentCard.content.meaning}
                                 </h3>
@@ -314,13 +318,13 @@ export default function PracticeDeckPage() {
                                         onClick={() => setShowHint(true)}
                                         className="text-sm font-bold text-amber-500 bg-amber-50 hover:bg-amber-100 rounded-lg px-3 py-2 transition-colors flex items-center gap-1"
                                     >
-                                        <span className="material-symbols-outlined text-[18px]">lightbulb</span> Gợi ý
+                                        <span className="material-symbols-outlined text-[18px]">lightbulb</span> {t("practice.writing.hint")}
                                     </button>
                                 </div>
                                 
                                 {showHint && (
                                     <div className="mt-4 px-6 py-3 bg-white/50 border border-slate-200 rounded-xl text-center shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                        <p className="text-slate-500 text-xs uppercase font-bold tracking-widest mb-1">Pinyin</p>
+                                        <p className="text-slate-500 text-xs uppercase font-bold tracking-widest mb-1">{t("practice.writing.pinyin")}</p>
                                         <p className="text-2xl font-bold text-primary">{currentCard.content.pinyin}</p>
                                     </div>
                                 )}
@@ -332,7 +336,7 @@ export default function PracticeDeckPage() {
                                     type="text"
                                     value={inputValue}
                                     onChange={(e) => setInputValue(e.target.value)}
-                                    placeholder="Gõ Hanzi..."
+                                    placeholder={t("practice.writing.inputPlaceholder")}
                                     className={`w-full text-center text-3xl py-6 px-4 rounded-2xl border-2 bg-white dark:bg-slate-900 shadow-sm transition-all focus:outline-none placeholder:text-slate-300 ${
                                         answerState === 'idle' ? 'border-indigo-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 text-slate-800 dark:text-slate-100' :
                                         answerState === 'correct' ? 'border-green-500 bg-green-50 text-green-700 scale-105' :
@@ -360,7 +364,7 @@ export default function PracticeDeckPage() {
                                     setCardIndex(prev => prev + 1);
                                     resetTurnState();
                                 }} className="text-slate-400 font-bold hover:text-slate-600 transition-colors mt-8">
-                                    Bỏ qua thẻ này
+                                    {t("practice.writing.skipCard")}
                                 </button>
                             )}
 

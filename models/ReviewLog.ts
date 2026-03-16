@@ -41,6 +41,12 @@ const reviewLogSchema = new Schema(
             enum: ["new", "learning", "mastered"],
             required: true,
         },
+        sessionId: {
+            type: Schema.Types.ObjectId,
+            ref: "LearningSession",
+            default: null,
+            index: true,
+        },
     },
     {
         timestamps: true,

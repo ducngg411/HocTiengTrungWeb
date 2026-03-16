@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type HanziWriter from "hanzi-writer";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type HanziWritingPracticeProps = {
     hanzi: string;
@@ -13,6 +14,7 @@ export default function HanziWritingPractice({ hanzi }: HanziWritingPracticeProp
     const [mode, setMode] = useState<WritingMode>("guided");
     const [quizComplete, setQuizComplete] = useState(false);
     const [showAnswer, setShowAnswer] = useState(false);
+    const { t } = useLanguage();
 
     // Guided mode refs
     const guidedContainerRef = useRef<HTMLDivElement | null>(null);
@@ -194,8 +196,8 @@ export default function HanziWritingPractice({ hanzi }: HanziWritingPracticeProp
 
     const description =
         mode === "blank"
-            ? "Viết tự do — nét hiển thị đầy đủ trên bảng. Nhấn 'Xem đáp án' để xem thứ tự nét chuẩn."
-            : "Bảng có nét mờ gợi ý. Viết đúng từng nét theo thứ tự chuẩn. Gợi ý hiện sau 2 lần sai.";
+            ? t("practice.writing.descBlank")
+            : t("practice.writing.descGuided");
 
     return (
         <div className="flex flex-col gap-4">
@@ -206,21 +208,21 @@ export default function HanziWritingPractice({ hanzi }: HanziWritingPracticeProp
                     className={`flex-1 px-3 py-1.5 rounded-full transition-all ${mode === "blank" ? "bg-white dark:bg-slate-900 text-primary shadow-sm" : "text-slate-500 dark:text-slate-300"}`}
                     onClick={() => switchMode("blank")}
                 >
-                    Bảng trắng tinh
+                    {t("practice.writing.boardBlank")}
                 </button>
                 <button
                     type="button"
                     className={`flex-1 px-3 py-1.5 rounded-full transition-all ${mode === "guided" ? "bg-white dark:bg-slate-900 text-primary shadow-sm" : "text-slate-500 dark:text-slate-300"}`}
                     onClick={() => switchMode("guided")}
                 >
-                    Viết theo nét
+                    {t("practice.writing.boardGuided")}
                 </button>
             </div>
 
             {/* Chọn ký tự khi từ có nhiều hơn 1 chữ */}
             {chars.length > 1 && (
                 <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400 shrink-0">Ký tự:</span>
+                    <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400 shrink-0">{t("practice.writing.charLabel")}</span>
                     <div className="flex gap-1.5 flex-wrap">
                         {chars.map((c, idx) => (
                             <button
@@ -246,7 +248,7 @@ export default function HanziWritingPractice({ hanzi }: HanziWritingPracticeProp
                 {/* Left: reference */}
                 <div className="flex-1 flex flex-col items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700/70 px-3 py-4 min-h-[120px]">
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-400 mb-2">
-                        {chars.length > 1 ? `Ký tự ${charIndex + 1}/${chars.length}` : "Từ cần viết"}
+                        {chars.length > 1 ? t("practice.writing.charCount", { current: charIndex + 1, total: chars.length }) : t("practice.writing.wordToFill")}
                     </p>
                     <p className="text-6xl sm:text-7xl font-bold text-slate-900 dark:text-white leading-tight">
                         {chars.length > 1 ? char : hanzi}
@@ -258,7 +260,7 @@ export default function HanziWritingPractice({ hanzi }: HanziWritingPracticeProp
 
                 {/* Right: writing board */}
                 <div className="flex-1 flex flex-col gap-2">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Bảng luyện viết</p>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{t("practice.writing.boardArea")}</p>
 
                     {/* ── Guided mode ── */}
                     {mode === "guided" && (
@@ -273,11 +275,11 @@ export default function HanziWritingPractice({ hanzi }: HanziWritingPracticeProp
                             {quizComplete ? (
                                 <div className="flex items-center gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/30 px-3 py-2">
                                     <span className="material-symbols-outlined text-base text-emerald-500">check_circle</span>
-                                    <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Hoàn thành! Bạn đã viết đúng tất cả các nét.</p>
+                                    <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{t("practice.writing.guidedSuccess")}</p>
                                 </div>
                             ) : (
                                 <p className="text-[11px] text-slate-500">
-                                    Vẽ theo nét gợi ý màu xám. Nét sẽ sáng xanh khi bạn vẽ đúng.
+                                    {t("practice.writing.guidedTut")}
                                 </p>
                             )}
                         </>
@@ -312,7 +314,7 @@ export default function HanziWritingPractice({ hanzi }: HanziWritingPracticeProp
                                 <div
                                     className={`absolute inset-0 flex flex-col items-center justify-center gap-1 transition-opacity duration-200 ${showAnswer ? "opacity-100" : "opacity-0 pointer-events-none"}`}
                                 >
-                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Thứ tự nét chuẩn</p>
+                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{t("practice.writing.standardOrder")}</p>
                                     <div ref={answerContainerRef} className="w-[220px] h-[220px]" data-no-flip="true" />
                                 </div>
                             </div>
@@ -326,7 +328,7 @@ export default function HanziWritingPractice({ hanzi }: HanziWritingPracticeProp
                                         className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-xl border border-slate-200 bg-white dark:bg-slate-800 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                                     >
                                         <span className="material-symbols-outlined text-sm">edit</span>
-                                        Viết lại
+                                        {t("practice.writing.rewriteBtn")}
                                     </button>
                                 ) : (
                                     <button
@@ -335,7 +337,7 @@ export default function HanziWritingPractice({ hanzi }: HanziWritingPracticeProp
                                         className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-xl border border-slate-200 bg-white dark:bg-slate-800 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                                     >
                                         <span className="material-symbols-outlined text-sm">delete</span>
-                                        Xóa bảng
+                                        {t("practice.writing.clearBtn")}
                                     </button>
                                 )}
                                 <button
@@ -345,7 +347,7 @@ export default function HanziWritingPractice({ hanzi }: HanziWritingPracticeProp
                                     className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-xl border border-primary/30 bg-primary/5 text-xs font-medium text-primary hover:bg-primary/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     <span className="material-symbols-outlined text-sm">play_circle</span>
-                                    Xem thứ tự nét
+                                    {t("practice.writing.showOrderBtn")}
                                 </button>
                             </div>
                         </>

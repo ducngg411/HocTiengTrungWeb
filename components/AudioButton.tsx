@@ -1,6 +1,7 @@
 "use client";
 
 import { MouseEvent, PointerEvent, TouchEvent, useMemo } from "react";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 type AudioButtonProps = {
     text: string;
@@ -9,6 +10,7 @@ type AudioButtonProps = {
 };
 
 export default function AudioButton({ text, lang = "zh-CN", minimal = false }: AudioButtonProps) {
+    const { t } = useLanguage();
     const supported = useMemo(
         () => typeof window !== "undefined" && "speechSynthesis" in window,
         []
@@ -43,8 +45,8 @@ export default function AudioButton({ text, lang = "zh-CN", minimal = false }: A
             }}
             onPointerDown={(e) => e.stopPropagation()} // Chỉ dừng nổi bọt pointer down để thẻ không bị nhận nhầm
             className={minimal 
-                ? "inline-flex items-center justify-center rounded-full size-8 bg-primary/10 text-primary transition hover:bg-primary/20 hover:scale-110 active:scale-95 relative z-50"
-                : "inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 active:scale-[0.98] relative z-50 shadow-sm"
+                ? "inline-flex items-center justify-center rounded-full size-8 bg-primary/10 text-primary transition hover:bg-primary/20 hover:scale-110 active:scale-95 relative z-10"
+                : "inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 active:scale-[0.98] relative z-10 shadow-sm"
             }
             style={{ transform: "translateZ(1px)" }} // Sửa lỗi trình duyệt chặn click mặt sau thẻ 3D
             aria-label={`Phát âm cho ${text}`}
@@ -53,7 +55,7 @@ export default function AudioButton({ text, lang = "zh-CN", minimal = false }: A
             data-no-flip="true"
         >
             <span className={`material-symbols-outlined ${minimal ? 'text-[20px]' : 'text-[20px]'}`}>volume_up</span>
-            {!minimal && "Nghe"}
+            {!minimal && t("common.listen")}
         </button>
     );
 }

@@ -3,6 +3,7 @@
 import { MouseEvent, PointerEvent, TouchEvent, useEffect, useRef, useState } from "react";
 import AudioButton from "@/components/AudioButton";
 import HanziWritingPractice from "@/components/HanziWritingPractice";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 export type VocabItem = {
     hanzi: string;
@@ -43,6 +44,7 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
     const pointerStartY = useRef<number | null>(null);
     const suppressClick = useRef(false);
     const cardRef = useRef<HTMLDivElement>(null);
+    const { t } = useLanguage();
 
     // Dùng native event listener để có thể preventDefault() mượt mà trên iOS Safari,
     // chặn trình duyệt vuốt qua lại (ví dụ gesture "Back") khi đang vuốt thẻ.
@@ -277,7 +279,7 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
     return (
         <article className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-slate-500">Thẻ Từ</p>
+                <p className="text-sm font-medium text-slate-500">{t("flashcard.label")}</p>
                 <div className="flex items-center gap-2" data-no-flip="true" onClick={e => e.stopPropagation()}>
                     <button
                         type="button"
@@ -285,7 +287,7 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
                         onClick={() => setShowWriting(true)}
                     >
                         <span className="material-symbols-outlined text-base mr-1">edit</span>
-                        Viết
+                        {t("flashcard.write")}
                     </button>
                     <AudioButton text={item.hanzi} />
                 </div>
@@ -306,7 +308,7 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
                     style={{ opacity: hardOpacity }}
                 >
                     <div className="rounded-full border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700">
-                        Hard
+                        {t("flashcard.hard")}
                     </div>
                 </div>
 
@@ -315,7 +317,7 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
                     style={{ opacity: easyOpacity }}
                 >
                     <div className="rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
-                        Easy
+                        {t("flashcard.easy")}
                     </div>
                 </div>
 
@@ -350,7 +352,7 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
                     }}
                 >
                     <div
-                        className="relative w-full aspect-[3/4] duration-300"
+                        className="relative w-full aspect-[3/4] lg:aspect-auto lg:h-[440px] duration-300"
                         style={{
                             transformStyle: "preserve-3d",
                             transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
@@ -363,8 +365,8 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
                             <div className="absolute inset-0 opacity-5 pointer-events-none bg-gradient-to-br from-primary to-transparent rounded-2xl"></div>
 
                             <div className="z-10 flex flex-col items-center justify-center w-full h-full">
-                                <span className="text-slate-400 text-sm font-medium mb-4 tracking-widest uppercase">{progress?.status === "learning" ? "Luyện Tập Lại" : "Dịch Ký Tự Này"}</span>
-                                <p className="text-8xl lg:text-9xl font-bold text-slate-900 dark:text-white mb-2">{item.hanzi}</p>
+                                <span className="text-slate-400 text-sm font-medium mb-4 tracking-widest uppercase">{progress?.status === "learning" ? t("flashcard.practiceAgain") : t("flashcard.translateThis")}</span>
+                                <p className="text-8xl font-bold text-slate-900 dark:text-white mb-2">{item.hanzi}</p>
 
                                 {item.pinyin && (
                                     <p className="text-2xl font-bold text-slate-500 mt-2 tracking-wide select-none">
@@ -373,7 +375,7 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
                                 )}
 
                                 <div className="absolute bottom-6 left-0 right-0 flex justify-center opacity-40">
-                                    <p className="text-xs text-slate-400">Chạm để lật thẻ xem nghĩa</p>
+                                    <p className="text-xs text-slate-400">{t("flashcard.tapToFlip")}</p>
                                 </div>
                             </div>
                         </div>
@@ -390,24 +392,24 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
                             <div className="absolute inset-0 opacity-5 pointer-events-none bg-gradient-to-br from-primary to-transparent rounded-2xl"></div>
 
                             <div className="z-10 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 mb-4 border border-primary/10">
-                                <p className="text-sm font-medium uppercase tracking-wide text-slate-500">Pinyin</p>
+                                <p className="text-sm font-medium uppercase tracking-wide text-slate-500">{t("flashcard.pinyin")}</p>
                                 <p className="mt-1 text-2xl font-semibold text-slate-800 dark:text-slate-100">{item.pinyin}</p>
                             </div>
 
                             <div className="z-10 bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm rounded-xl p-4 border border-primary/10 flex-1">
-                                <p className="text-sm font-medium uppercase tracking-wide text-slate-500">Nghĩa</p>
+                                <p className="text-sm font-medium uppercase tracking-wide text-slate-500">{t("flashcard.meaning")}</p>
                                 <p className="mt-1 text-xl font-bold text-primary">{item.meaning}</p>
 
 
                                 <div className="mt-4 flex items-center justify-between gap-3">
-                                    <p className="text-sm font-medium uppercase tracking-wide text-slate-500">Ví Dụ</p>
+                                    <p className="text-sm font-medium uppercase tracking-wide text-slate-500">{t("flashcard.example")}</p>
                                     <div data-no-flip="true" onClick={e => e.stopPropagation()}>
                                         {item.example.trim() ? <AudioButton text={item.example} /> : null}
                                     </div>
                                 </div>
                                 <p className="mt-1 text-base text-slate-800">{item.example}</p>
 
-                                <p className="mt-4 text-sm font-medium uppercase tracking-wide text-slate-500">Ví Dụ & Phiên Âm</p>
+                                <p className="mt-4 text-sm font-medium uppercase tracking-wide text-slate-500">{t("flashcard.exampleAndPinyin")}</p>
                                 <p className="mt-1 text-base text-slate-800 dark:text-slate-200 font-medium">{item.example}</p>
                                 <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{item.examplePinyin}</p>
                                 <p className="mt-2 text-base text-slate-700 dark:text-slate-300 border-l-2 border-primary pl-3 italic">{item.exampleMeaning}</p>
@@ -430,7 +432,7 @@ export default function Flashcard({ item, progress, onNext, onSwipeLeft, onSwipe
                         <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-2">
                                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                                    Luyện viết ký tự
+                                    {t("flashcard.practiceWriting")}
                                 </span>
                                 <span className="text-2xl font-bold text-slate-900 dark:text-white">
                                     {item.hanzi}

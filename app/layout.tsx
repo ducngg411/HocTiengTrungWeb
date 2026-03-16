@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Lexend } from "next/font/google";
 import "./globals.css";
+import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 
 const lexend = Lexend({
   variable: "--font-lexend",
@@ -41,7 +42,9 @@ export default function RootLayout({
         `}} />
       </head>
       <body className={`${lexend.variable} antialiased`}>
-        {children}
+        <LanguageProvider>
+          {children}
+        </LanguageProvider>
       </body>
     </html>
   );

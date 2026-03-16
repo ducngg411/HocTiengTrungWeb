@@ -3,9 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getStoredUsername, setStoredUsername } from "@/lib/client-auth";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function LoginPage() {
     const router = useRouter();
+    const { t } = useLanguage();
     const [usernameInput, setUsernameInput] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,13 +35,13 @@ export default function LoginPage() {
 
             const payload = (await response.json()) as { username?: string; error?: string };
             if (!response.ok || !payload.username) {
-                throw new Error(payload.error || "Đăng nhập thất bại");
+                throw new Error(payload.error || t("login.loginFailed"));
             }
 
             setStoredUsername(payload.username);
             router.replace("/flashcard");
         } catch (requestError) {
-            const message = requestError instanceof Error ? requestError.message : "Đăng nhập thất bại";
+            const message = requestError instanceof Error ? requestError.message : t("login.loginFailed");
             setError(message);
         } finally {
             setIsSubmitting(false);
@@ -47,6 +50,10 @@ export default function LoginPage() {
 
     return (
         <div className="relative flex min-h-screen w-full flex-col bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 items-center justify-center p-4">
+            <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+                <LanguageSwitcher />
+            </div>
+
             <div className="w-full max-w-sm">
                 {/* Header Icon & Title */}
                 <div className="text-center mb-8">
@@ -54,10 +61,10 @@ export default function LoginPage() {
                         <span className="material-symbols-outlined text-[40px]">school</span>
                     </div>
                     <h1 className="text-3xl font-bold bg-gradient-to-br from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
-                        Đăng Nhập
+                        {t("login.title")}
                     </h1>
                     <p className="mt-2 text-sm text-slate-500 font-medium">
-                        Bắt đầu hành trình học từ vựng của bạn
+                        {t("login.subtitle")}
                     </p>
                 </div>
 
@@ -66,7 +73,7 @@ export default function LoginPage() {
                     <div className="space-y-4">
                         <div>
                             <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2 pl-1" htmlFor="username-input">
-                                Tên người dùng
+                                {t("login.usernameLabel")}
                             </label>
                             <div className="relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
@@ -79,7 +86,7 @@ export default function LoginPage() {
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') handleLogin();
                                     }}
-                                    placeholder="Ví dụ: ducngg"
+                                    placeholder={t("login.usernamePlaceholder")}
                                     className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 pl-11 pr-4 py-3.5 text-sm font-medium text-slate-900 dark:text-white outline-none ring-primary/20 transition-all focus:bg-white dark:focus:bg-slate-800 focus:border-primary focus:ring-4"
                                 />
                             </div>
@@ -95,11 +102,11 @@ export default function LoginPage() {
                                 {isSubmitting ? (
                                     <>
                                         <span className="material-symbols-outlined animate-spin text-[20px]">sync</span>
-                                        Đang đăng nhập...
+                                        {t("login.submittingButton")}
                                     </>
                                 ) : (
                                     <>
-                                        Tiếp tục
+                                        {t("login.submitButton")}
                                         <span className="material-symbols-outlined text-[20px] transition-transform group-hover:translate-x-1">arrow_forward</span>
                                     </>
                                 )}

@@ -16,6 +16,8 @@ import {
     YAxis,
 } from "recharts";
 import { clearStoredUsername, getStoredUsername } from "@/lib/client-auth";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 type DeckSummary = {
     id: string;
@@ -68,6 +70,7 @@ export default function FlashcardDeckPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [deletingDeckId, setDeletingDeckId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const { t } = useLanguage();
 
     useEffect(() => {
         const saved = getStoredUsername();
@@ -119,7 +122,7 @@ export default function FlashcardDeckPage() {
     const deleteDeck = async (deckId: string, deckName: string) => {
         if (!username) return;
 
-        const shouldDelete = window.confirm(`Xóa bộ \"${deckName}\"? Tất cả thẻ và tiến độ liên quan sẽ bị xóa.`);
+        const shouldDelete = window.confirm(t("common.delete") + ` "${deckName}"?`);
         if (!shouldDelete) return;
 
         setDeletingDeckId(deckId);
@@ -175,6 +178,7 @@ export default function FlashcardDeckPage() {
                             <button className="p-2 text-slate-500 hover:bg-primary/10 hover:text-primary rounded-lg transition-colors">
                                 <span className="material-symbols-outlined">notifications</span>
                             </button>
+                            <LanguageSwitcher />
                             <div className="h-8 w-[1px] bg-slate-200 dark:bg-slate-800 mx-2"></div>
                             <button
                                 type="button"
@@ -182,8 +186,8 @@ export default function FlashcardDeckPage() {
                                 className="group flex items-center gap-3 pl-2 transition-opacity hover:opacity-80"
                             >
                                 <div className="hidden sm:block text-right">
-                                    <p className="text-sm font-semibold">{username || "User"}</p>
-                                    <p className="text-xs text-slate-500">Người Học</p>
+                                    <p className="text-sm font-semibold">{username || t("dashboard.defaultUser")}</p>
+                                    <p className="text-xs text-slate-500">{t("dashboard.learner")}</p>
                                 </div>
                                 <div className="size-10 rounded-full bg-primary/30 border-2 border-primary overflow-hidden flex items-center justify-center text-primary font-bold">
                                     {username ? username.charAt(0).toUpperCase() : "U"}
@@ -198,7 +202,7 @@ export default function FlashcardDeckPage() {
 
             {isLoading && (
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-600 shadow-sm">
-                    Đang tải dashboard...
+                    {t("common.loading")}
                 </section>
             )}
 
@@ -212,9 +216,9 @@ export default function FlashcardDeckPage() {
             {!isLoading && !error && userProgress && (
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 mt-4">
                     <div>
-                        <h2 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">My Decks</h2>
+                        <h2 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">{t("dashboard.myDecks")}</h2>
                         <p className="mt-2 text-slate-500 dark:text-slate-400 max-w-md">
-                            Continue your language journey. You've mastered {userProgress.masteredProgressPercent}% of your total vocabulary.
+                            {t("dashboard.learningActivity")}
                         </p>
                     </div>
                     <Link
@@ -222,7 +226,7 @@ export default function FlashcardDeckPage() {
                         className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-slate-900 font-bold rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/20"
                     >
                         <span className="material-symbols-outlined">add_circle</span>
-                        <span>Create New Deck</span>
+                        <span>{t("dashboard.createDeck")}</span>
                     </Link>
                 </div>
             )}
@@ -231,22 +235,22 @@ export default function FlashcardDeckPage() {
             {!isLoading && userProgress && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
                     <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-primary/5 shadow-sm">
-                        <p className="text-slate-500 text-sm font-medium">Total Words</p>
+                        <p className="text-slate-500 text-sm font-medium">{t("dashboard.stats.totalWords")}</p>
                         <p className="text-2xl font-bold mt-1 text-slate-900 dark:text-slate-100">{userProgress.totalCards}</p>
                     </div>
                     <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-primary/5 shadow-sm">
-                        <p className="text-slate-500 text-sm font-medium">Words Learned</p>
+                        <p className="text-slate-500 text-sm font-medium">{t("dashboard.stats.wordsLearned")}</p>
                         <p className="text-2xl font-bold mt-1 text-primary">{userProgress.reviewedCards}</p>
                     </div>
                     <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-primary/5 shadow-sm">
-                        <p className="text-slate-500 text-sm font-medium">Study Streak</p>
+                        <p className="text-slate-500 text-sm font-medium">{t("dashboard.stats.streak")}</p>
                         <div className="flex items-center gap-2 mt-1 text-slate-900 dark:text-slate-100">
-                            <p className="text-2xl font-bold">{userProgress.streak} Days</p>
+                            <p className="text-2xl font-bold">{userProgress.streak} {t("dashboard.stats.days")}</p>
                             <span className="material-symbols-outlined text-orange-400">local_fire_department</span>
                         </div>
                     </div>
                     <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-primary/5 shadow-sm">
-                        <p className="text-slate-500 text-sm font-medium">Mastered</p>
+                        <p className="text-slate-500 text-sm font-medium">{t("dashboard.stats.goal")}</p>
                         <p className="text-2xl font-bold mt-1 text-slate-900 dark:text-slate-100">{userProgress.masteredProgressPercent}%</p>
                     </div>
                 </div>
@@ -256,7 +260,7 @@ export default function FlashcardDeckPage() {
 
             {!isLoading && !error && (
                 <div className="mb-10">
-                    {!decks.length && <p className="mt-2 text-sm text-slate-600">Bạn chưa có bộ nào. Hãy tạo bộ đầu tiên ở trên.</p>}
+                    {!decks.length && <p className="mt-2 text-sm text-slate-600">{t("dashboard.emptyDecks")}</p>}
 
                     {!!decks.length && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -289,20 +293,20 @@ export default function FlashcardDeckPage() {
                                                 </button>
                                             </div>
                                             <p className="text-sm text-slate-500 mb-6 line-clamp-2 min-h-[40px]">
-                                                {deck.description || "Không có mô tả"}
+                                                {deck.description || t("dashboard.noDescription")}
                                             </p>
                                             
                                             <div className="space-y-3 mt-auto">
                                                 <div className="flex justify-between text-sm font-medium">
-                                                    <span className="text-slate-500 line-clamp-1 flex-1 mr-2">Đã học (khó + dễ)</span>
-                                                    <span className="text-primary truncate">{stat?.reviewedCards ?? 0} / {stat?.totalCards ?? deck.cardCount} thẻ</span>
+                                                    <span className="text-slate-500 line-clamp-1 flex-1 mr-2">{t("dashboard.stats.wordsLearned")}</span>
+                                                    <span className="text-primary truncate">{stat?.reviewedCards ?? 0} / {stat?.totalCards ?? deck.cardCount} {t("dashboard.deck.cards")}</span>
                                                 </div>
                                                 <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                                                     <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progressPercent}%` }}></div>
                                                 </div>
                                                 
                                                 <div className="flex justify-between text-xs font-medium mt-1">
-                                                    <span className="text-slate-400 line-clamp-1 flex-1 mr-2">Đã thuộc (dễ)</span>
+                                                    <span className="text-slate-400 line-clamp-1 flex-1 mr-2">{t("dashboard.deck.progress")}</span>
                                                     <span className="text-emerald-500 truncate">{stat?.masteredCards ?? 0} / {stat?.totalCards ?? deck.cardCount} ({masteredPercent}%)</span>
                                                 </div>
                                             </div>
@@ -310,11 +314,11 @@ export default function FlashcardDeckPage() {
                                             <div className="flex gap-2 w-full mt-6">
                                                 <Link href={`/flashcard/study/${deck.id}`} className="flex-1 py-3 bg-primary/10 hover:bg-primary text-primary hover:text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
                                                     <span className="material-symbols-outlined">play_arrow</span>
-                                                    Study
+                                                    {t("dashboard.deck.studyNow")}
                                                 </Link>
                                                 <Link href={`/flashcard/practice/${deck.id}`} className="flex-1 py-3 bg-indigo-50 hover:bg-indigo-500 text-indigo-600 hover:text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
                                                     <span className="material-symbols-outlined">edit_square</span>
-                                                    Practice
+                                                    {t("dashboard.deck.practice")}
                                                 </Link>
                                             </div>
                                         </div>

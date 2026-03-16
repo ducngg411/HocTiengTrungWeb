@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clearStoredUsername, getStoredUsername } from "@/lib/client-auth";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function CreateDeckPage() {
     const router = useRouter();
@@ -17,6 +19,7 @@ export default function CreateDeckPage() {
     const [isDetectingTabs, setIsDetectingTabs] = useState(false);
     const [isCreatingDeck, setIsCreatingDeck] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { t } = useLanguage();
 
     // Hardcode UI states cho Source Type (hiện tại backend chỉ hỗ trợ GSheet nên ta mặc định chọn 1)
     const [sourceType, setSourceType] = useState<"sheets" | "manual">("sheets");
@@ -47,13 +50,13 @@ export default function CreateDeckPage() {
 
             const payload = (await response.json()) as { sheets?: string[]; error?: string };
             if (!response.ok || !Array.isArray(payload.sheets)) {
-                throw new Error(payload.error || "Không thể lấy danh sách tab trong sheet");
+                throw new Error(payload.error || t("createDeck.fetchTabsFailed"));
             }
 
             setSheetTabs(payload.sheets);
             setSelectedSheetTab(payload.sheets[0] ?? "");
         } catch (requestError) {
-            const message = requestError instanceof Error ? requestError.message : "Không thể lấy danh sách tab trong sheet";
+            const message = requestError instanceof Error ? requestError.message : t("createDeck.fetchTabsFailed");
             setError(message);
         } finally {
             setIsDetectingTabs(false);
@@ -83,12 +86,12 @@ export default function CreateDeckPage() {
 
             const payload = (await response.json()) as { id?: string; error?: string };
             if (!response.ok || !payload.id) {
-                throw new Error(payload.error || "Tạo bộ flashcard thất bại");
+                throw new Error(payload.error || t("createDeck.createFailed"));
             }
 
             router.replace("/flashcard");
         } catch (requestError) {
-            const message = requestError instanceof Error ? requestError.message : "Tạo bộ flashcard thất bại";
+            const message = requestError instanceof Error ? requestError.message : t("createDeck.createFailed");
             setError(message);
         } finally {
             setIsCreatingDeck(false);
@@ -108,6 +111,7 @@ export default function CreateDeckPage() {
                         </h2>
                     </div>
                     <div className="flex justify-end gap-3 sm:gap-4">
+                        <LanguageSwitcher />
                         <div className="flex gap-2">
                             <button className="flex items-center justify-center rounded-xl h-10 w-10 bg-primary/10 text-slate-900 dark:text-slate-100 transition-colors hover:bg-primary/20">
                                 <span className="material-symbols-outlined">settings</span>
@@ -126,38 +130,38 @@ export default function CreateDeckPage() {
                     <div className="layout-content-container flex flex-col max-w-[640px] w-full flex-1 gap-8">
                         {/* Title Section */}
                         <div className="flex flex-col gap-2 px-4">
-                            <h1 className="text-slate-900 dark:text-slate-100 text-3xl font-bold leading-tight">Xây dựng bộ thẻ của bạn</h1>
-                            <p className="text-slate-500 dark:text-slate-400 text-base">Nhập thông tin chi tiết để bắt đầu học Tiếng Trung theo lộ trình tuỳ chỉnh.</p>
+                            <h1 className="text-slate-900 dark:text-slate-100 text-3xl font-bold leading-tight">{t("createDeck.title")}</h1>
+                            <p className="text-slate-500 dark:text-slate-400 text-base">{t("createDeck.subtitle")}</p>
                         </div>
 
                         {/* Form Section */}
                         <div className="flex flex-col gap-6 bg-white dark:bg-slate-900 p-6 rounded-xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-primary/10 pb-8">
                             {/* Deck Name Input */}
                             <div className="flex flex-col gap-2">
-                                <label className="text-slate-900 dark:text-slate-100 text-sm font-semibold leading-normal">Tên Bộ Thẻ</label>
+                                <label className="text-slate-900 dark:text-slate-100 text-sm font-semibold leading-normal">{t("createDeck.deckName")}</label>
                                 <input
                                     value={deckName}
                                     onChange={(event) => setDeckName(event.target.value)}
                                     className="form-input flex w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-2 focus:ring-primary/20 h-12 px-4 text-base transition-all outline-none"
-                                    placeholder="Ví dụ: HSK 1 Core Vocabulary"
+                                    placeholder={t("createDeck.deckNamePlaceholder")}
                                     type="text"
                                 />
                             </div>
 
                             {/* Description Textarea */}
                             <div className="flex flex-col gap-2">
-                                <label className="text-slate-900 dark:text-slate-100 text-sm font-semibold leading-normal">Mô tả chi tiết</label>
+                                <label className="text-slate-900 dark:text-slate-100 text-sm font-semibold leading-normal">{t("createDeck.description")}</label>
                                 <textarea
                                     value={deckDescription}
                                     onChange={(event) => setDeckDescription(event.target.value)}
                                     className="form-input flex w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-2 focus:ring-primary/20 min-h-24 p-4 text-base transition-all outline-none resize-none"
-                                    placeholder="Chủ đề và cấp độ từ vựng trong bộ này là gì?"
+                                    placeholder={t("createDeck.descriptionPlaceholder")}
                                 ></textarea>
                             </div>
 
                             {/* Source Type Selector */}
                             <div className="flex flex-col gap-3">
-                                <label className="text-slate-900 dark:text-slate-100 text-sm font-semibold leading-normal">Nguồn Dữ Liệu</label>
+                                <label className="text-slate-900 dark:text-slate-100 text-sm font-semibold leading-normal">{t("createDeck.sourceType")}</label>
                                 <div className="flex items-center gap-2 p-3 rounded-lg border-2 border-primary bg-primary/5 text-primary font-medium w-fit pr-6">
                                     <span className="material-symbols-outlined text-xl">table_chart</span>
                                     <span>Google Sheets</span>
@@ -176,8 +180,8 @@ export default function CreateDeckPage() {
                                     {/* Google Sheets Link Input */}
                                     <div className="flex flex-col gap-2">
                                         <div className="flex items-center justify-between">
-                                            <label className="text-slate-900 dark:text-slate-100 text-sm font-semibold leading-normal">Đường dẫn Google Sheets</label>
-                                            <a className="text-primary text-xs font-medium hover:underline" href="#" title="Chia sẻ trang tính ở chế độ: Bất kỳ ai có liên kết đều có thể xem">Chia sẻ thế nào?</a>
+                                            <label className="text-slate-900 dark:text-slate-100 text-sm font-semibold leading-normal">{t("createDeck.sheetUrl")}</label>
+                                            <a className="text-primary text-xs font-medium hover:underline" href="#" title={t("createDeck.howToShareDesc")}>{t("createDeck.howToShare")}</a>
                                         </div>
                                         <div className="flex flex-col sm:flex-row gap-2">
                                             <div className="relative flex-1">
@@ -190,7 +194,7 @@ export default function CreateDeckPage() {
                                                         setSelectedSheetTab("");
                                                     }}
                                                     className="form-input flex w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 focus:border-primary focus:ring-2 focus:ring-primary/20 h-12 pl-10 pr-4 text-base outline-none transition-all"
-                                                    placeholder="https://docs.google.../edit#gid=0"
+                                                    placeholder={t("createDeck.sheetUrlPlaceholder")}
                                                     type="url"
                                                 />
                                             </div>
@@ -200,16 +204,16 @@ export default function CreateDeckPage() {
                                                 disabled={!sheetUrl || isDetectingTabs}
                                                 className="sm:w-auto w-full flex-none items-center justify-center h-12 gap-2 rounded-lg bg-slate-100 dark:bg-slate-700 px-6 font-bold text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-200 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 disabled:opacity-50"
                                             >
-                                                {isDetectingTabs ? "Đang quét..." : "Quét Tabs"}
+                                                {isDetectingTabs ? t("createDeck.scanning") : t("createDeck.scanTabs")}
                                             </button>
                                         </div>
-                                        <p className="text-slate-400 text-xs mt-1 italic">Đảm bảo trang tính đang được thiết lập "Bất kỳ ai có đường liên kết đều có thể xem".</p>
+                                        <p className="text-slate-400 text-xs mt-1 italic">{t("createDeck.howToShareDesc")}</p>
                                     </div>
                                     
                                     {/* Sheet Tabs Dropdown */}
                                     {!!sheetTabs.length && (
                                         <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                            <label className="text-slate-900 dark:text-slate-100 text-sm font-semibold leading-normal">Chọn Tab Dữ Liệu</label>
+                                            <label className="text-slate-900 dark:text-slate-100 text-sm font-semibold leading-normal">{t("createDeck.selectTab")}</label>
                                             <div className="relative">
                                                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">view_list</span>
                                                 <select
@@ -245,17 +249,17 @@ export default function CreateDeckPage() {
                                 {isCreatingDeck ? (
                                     <span className="flex items-center gap-2">
                                         <span className="material-symbols-outlined animate-spin hidden sm:inline-block">sync</span>
-                                        Đang tạo...
+                                        {t("createDeck.submitting")}
                                     </span>
                                 ) : (
-                                    "Tạo Bộ Thẻ Mới"
+                                    t("createDeck.submit")
                                 )}
                             </button>
                             <Link
                                 href="/flashcard"
                                 className="flex w-full cursor-pointer items-center justify-center rounded-xl h-12 bg-transparent text-slate-500 font-medium hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
                             >
-                                Tuỳ chọn và quay lại sau
+                                {t("createDeck.cancel")}
                             </Link>
                         </div>
 
@@ -263,9 +267,9 @@ export default function CreateDeckPage() {
                         <div className="mx-4 mb-10 p-4 rounded-xl bg-primary/5 border border-primary/10 flex gap-4">
                             <span className="material-symbols-outlined text-primary">lightbulb</span>
                             <div className="flex flex-col gap-1">
-                                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">Mẹo hữu ích</p>
+                                <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none">{t("createDeck.tipsTitle")}</p>
                                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                                    Đảm bảo bạn có ít nhất 3 cột chuẩn trong dòng đầu tiên của Google Sheets: <span className="font-mono bg-white/60 dark:bg-black/20 px-1 py-0.5 rounded text-primary">Hanzi</span>, <span className="font-mono bg-white/60 dark:bg-black/20 px-1 py-0.5 rounded text-primary">Pinyin</span>, và <span className="font-mono bg-white/60 dark:bg-black/20 px-1 py-0.5 rounded text-primary">Meaning</span>.
+                                    {t("createDeck.tipsDesc")}
                                 </p>
                             </div>
                         </div>
