@@ -1,4 +1,4 @@
-import { model, models, Schema, type InferSchemaType } from "mongoose";
+import mongoose, { model, models, Schema, type InferSchemaType } from "mongoose";
 
 const reviewLogSchema = new Schema(
     {
@@ -20,9 +20,9 @@ const reviewLogSchema = new Schema(
             required: true,
             index: true,
         },
-        grade: {
+        action: {
             type: String,
-            enum: ["hard", "good", "easy"],
+            enum: ["hard", "easy"],
             required: true,
         },
         studySeconds: {
@@ -35,14 +35,6 @@ const reviewLogSchema = new Schema(
             required: true,
             default: Date.now,
             index: true,
-        },
-        easeFactorAfter: {
-            type: Number,
-            required: true,
-        },
-        intervalDaysAfter: {
-            type: Number,
-            required: true,
         },
         statusAfter: {
             type: String,
@@ -59,6 +51,19 @@ reviewLogSchema.index({ userId: 1, reviewedAt: -1 });
 reviewLogSchema.index({ userId: 1, deckId: 1, reviewedAt: -1 });
 
 export type ReviewLogDocument = InferSchemaType<typeof reviewLogSchema>;
+
+const existingReviewLogModel = models.ReviewLog;
+
+if (
+    existingReviewLogModel &&
+    (
+        existingReviewLogModel.schema.path("grade") ||
+        existingReviewLogModel.schema.path("easeFactorAfter") ||
+        existingReviewLogModel.schema.path("intervalDaysAfter")
+    )
+) {
+    mongoose.deleteModel("ReviewLog");
+}
 
 const ReviewLog = models.ReviewLog || model("ReviewLog", reviewLogSchema);
 

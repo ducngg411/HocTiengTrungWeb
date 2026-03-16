@@ -6,13 +6,13 @@ import ReviewLog from "@/models/ReviewLog";
 import User from "@/models/User";
 import UserCardProgress from "@/models/UserCardProgress";
 import { validateUsername } from "@/services/auth";
-import { computeNextCardProgress, getDifficultyLabel, type CardStatus, type ReviewGrade } from "@/services/progress";
+import { computeUpdatedCardProgress, type CardStatus, type ReviewAction } from "@/services/progress";
 
 type ReviewPayload = {
     username?: unknown;
     deckId?: unknown;
     cardId?: unknown;
-    grade?: unknown;
+    action?: unknown;
     studySeconds?: unknown;
 };
 
@@ -27,15 +27,15 @@ export async function POST(request: Request) {
 
         const deckId = typeof payload.deckId === "string" ? payload.deckId.trim() : "";
         const cardId = typeof payload.cardId === "string" ? payload.cardId.trim() : "";
-        const grade = typeof payload.grade === "string" ? payload.grade.trim() : "";
+        const action = typeof payload.action === "string" ? payload.action.trim() : "";
         const studySeconds = typeof payload.studySeconds === "number" ? payload.studySeconds : 0;
 
         if (!deckId || !cardId) {
             return NextResponse.json({ error: "deckId and cardId are required" }, { status: 400 });
         }
 
-        if (!["hard", "good", "easy"].includes(grade)) {
-            return NextResponse.json({ error: "grade must be hard, good, or easy" }, { status: 400 });
+        if (!["hard", "easy"].includes(action)) {
+            return NextResponse.json({ error: "action must be hard or easy" }, { status: 400 });
         }
 
         await connectToDatabase();
@@ -57,21 +57,17 @@ export async function POST(request: Request) {
 
         const currentProgress = (await UserCardProgress.findOne({ userId: user._id, cardId: card._id }).lean()) as {
             reviewCount?: number;
-            easeFactor?: number;
-            intervalDays?: number;
             status?: CardStatus;
             totalStudySeconds?: number;
         } | null;
 
-        const nextProgress = computeNextCardProgress(
+        const nextProgress = computeUpdatedCardProgress(
             {
                 reviewCount: currentProgress?.reviewCount ?? 0,
-                easeFactor: currentProgress?.easeFactor ?? 2.5,
-                intervalDays: currentProgress?.intervalDays ?? 0,
                 status: currentProgress?.status ?? "new",
                 totalStudySeconds: currentProgress?.totalStudySeconds ?? 0,
             },
-            grade as ReviewGrade,
+            action as ReviewAction,
             studySeconds,
             new Date()
         );
@@ -83,11 +79,7 @@ export async function POST(request: Request) {
                     deckId: deck._id,
                     reviewCount: nextProgress.reviewCount,
                     lastReviewedAt: nextProgress.lastReviewedAt,
-                    nextReviewAt: nextProgress.nextReviewAt,
-                    easeFactor: nextProgress.easeFactor,
-                    intervalDays: nextProgress.intervalDays,
                     status: nextProgress.status,
-                    lastResult: nextProgress.lastResult,
                     totalStudySeconds: nextProgress.totalStudySeconds,
                 },
             },
@@ -98,11 +90,9 @@ export async function POST(request: Request) {
             userId: user._id,
             deckId: deck._id,
             cardId: card._id,
-            grade,
+            action,
             studySeconds: Math.max(0, Math.round(studySeconds)),
             reviewedAt: nextProgress.lastReviewedAt,
-            easeFactorAfter: nextProgress.easeFactor,
-            intervalDaysAfter: nextProgress.intervalDays,
             statusAfter: nextProgress.status,
         });
 
@@ -110,11 +100,7 @@ export async function POST(request: Request) {
             cardId,
             reviewCount: nextProgress.reviewCount,
             lastReviewedAt: nextProgress.lastReviewedAt,
-            nextReviewAt: nextProgress.nextReviewAt,
-            easeFactor: nextProgress.easeFactor,
             status: nextProgress.status,
-            difficulty: getDifficultyLabel(nextProgress.easeFactor),
-            intervalDays: nextProgress.intervalDays,
             totalStudySeconds: nextProgress.totalStudySeconds,
         });
     } catch (error) {

@@ -157,22 +157,44 @@ export default function FlashcardDeckPage() {
         : [];
 
     return (
-        <main className="mx-auto min-h-screen w-full max-w-5xl px-4 py-8 sm:px-6">
-            <header className="mb-5">
-                <div className="flex items-center justify-between gap-3">
-                    <h1 className="text-2xl font-bold text-slate-900">Bảng Điều Khiển Flashcard</h1>
-                    <button
-                        type="button"
-                        onClick={handleLogout}
-                        className="rounded-lg border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                    >
-                        Đăng xuất
-                    </button>
+        <div className="relative flex min-h-screen flex-col bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
+            {/* Top Navigation */}
+            <header className="sticky top-0 z-50 w-full border-b border-primary/10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex h-16 items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center size-10 rounded-lg bg-primary/20 text-primary">
+                                <span className="material-symbols-outlined">translate</span>
+                            </div>
+                            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Học Tiếng Trung</h1>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <button className="p-2 text-slate-500 hover:bg-primary/10 hover:text-primary rounded-lg transition-colors">
+                                <span className="material-symbols-outlined">settings</span>
+                            </button>
+                            <button className="p-2 text-slate-500 hover:bg-primary/10 hover:text-primary rounded-lg transition-colors">
+                                <span className="material-symbols-outlined">notifications</span>
+                            </button>
+                            <div className="h-8 w-[1px] bg-slate-200 dark:bg-slate-800 mx-2"></div>
+                            <button
+                                type="button"
+                                onClick={handleLogout}
+                                className="group flex items-center gap-3 pl-2 transition-opacity hover:opacity-80"
+                            >
+                                <div className="hidden sm:block text-right">
+                                    <p className="text-sm font-semibold">{username || "User"}</p>
+                                    <p className="text-xs text-slate-500">Người Học</p>
+                                </div>
+                                <div className="size-10 rounded-full bg-primary/30 border-2 border-primary overflow-hidden flex items-center justify-center text-primary font-bold">
+                                    {username ? username.charAt(0).toUpperCase() : "U"}
+                                </div>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <p className="mt-1 text-sm text-slate-600">
-                    Đăng nhập với <span className="font-semibold text-slate-900">{username || "..."}</span>
-                </p>
             </header>
+
+        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
 
             {isLoading && (
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-600 shadow-sm">
@@ -186,141 +208,124 @@ export default function FlashcardDeckPage() {
                 </section>
             )}
 
-            {!isLoading && userProgress && (
-                <section className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <h2 className="text-base font-semibold text-slate-900">Tiến Độ Tổng Quan</h2>
-
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <article className="rounded-xl border border-slate-200 p-3">
-                            <p className="text-xs uppercase tracking-wide text-slate-500">Tổng Số Bộ</p>
-                            <p className="mt-1 text-2xl font-semibold text-slate-900">{userProgress.totalDecks}</p>
-                        </article>
-                        <article className="rounded-xl border border-slate-200 p-3">
-                            <p className="text-xs uppercase tracking-wide text-slate-500">Hôm Nay Đã Học</p>
-                            <p className="mt-1 text-2xl font-semibold text-slate-900">{userProgress.todayStudiedCards}</p>
-                        </article>
-                        <article className="rounded-xl border border-slate-200 p-3">
-                            <p className="text-xs uppercase tracking-wide text-slate-500">Chuỗi Ngày Học</p>
-                            <p className="mt-1 text-2xl font-semibold text-slate-900">{userProgress.streak} ngày</p>
-                        </article>
-                        <article className="rounded-xl border border-slate-200 p-3">
-                            <p className="text-xs uppercase tracking-wide text-slate-500">Tổng Thời Gian Học</p>
-                            <p className="mt-1 text-2xl font-semibold text-slate-900">{userProgress.totalStudyTimeLabel}</p>
-                        </article>
-                    </div>
-
-                    <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                        <article className="rounded-xl border border-slate-200 p-3">
-                            <p className="text-sm font-semibold text-slate-900">Tiến Độ Tổng Thể</p>
-                            <p className="mt-1 text-sm text-slate-600">
-                                Đã học {userProgress.reviewedCards} / {userProgress.totalCards} thẻ ({userProgress.overallProgressPercent}%)
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500">
-                                Đã nhớ vững: {userProgress.masteredCards} ({userProgress.masteredProgressPercent}%)
-                            </p>
-                            <div className="mt-3 h-56">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={80} label>
-                                            {pieData.map((entry, idx) => (
-                                                <Cell key={`${entry.name}-${idx}`} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </article>
-
-                        <article className="rounded-xl border border-slate-200 p-3">
-                            <p className="text-sm font-semibold text-slate-900">So Sánh Tiến Độ Từng Bộ</p>
-                            <p className="mt-1 text-sm text-slate-600">Tỷ lệ thẻ đã học (%) của mỗi bộ</p>
-                            <div className="mt-3 h-56">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={userProgress.deckStats}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="deckName" tick={{ fontSize: 12 }} interval={0} angle={-20} textAnchor="end" height={60} />
-                                        <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
-                                        <Tooltip />
-                                        <Bar dataKey="progressPercent" fill="#0d9488" radius={[6, 6, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        </article>
-                    </div>
-                </section>
-            )}
-
-            <section className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-3">
+            {/* Header Section */}
+            {!isLoading && !error && userProgress && (
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 mt-4">
                     <div>
-                        <h2 className="text-base font-semibold text-slate-900">Tạo Bộ Mới</h2>
-                        <p className="mt-1 text-sm text-slate-600">Mở màn hình riêng để import từ Google Sheets.</p>
+                        <h2 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">My Decks</h2>
+                        <p className="mt-2 text-slate-500 dark:text-slate-400 max-w-md">
+                            Continue your language journey. You've mastered {userProgress.masteredProgressPercent}% of your total vocabulary.
+                        </p>
                     </div>
                     <Link
                         href="/flashcard/create"
-                        className="rounded-xl border border-teal-600 bg-teal-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-teal-700"
+                        className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-slate-900 font-bold rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/20"
                     >
-                        Tạo Bộ
+                        <span className="material-symbols-outlined">add_circle</span>
+                        <span>Create New Deck</span>
                     </Link>
                 </div>
-            </section>
+            )}
+
+            {/* Stats Overview */}
+            {!isLoading && userProgress && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+                    <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-primary/5 shadow-sm">
+                        <p className="text-slate-500 text-sm font-medium">Total Words</p>
+                        <p className="text-2xl font-bold mt-1 text-slate-900 dark:text-slate-100">{userProgress.totalCards}</p>
+                    </div>
+                    <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-primary/5 shadow-sm">
+                        <p className="text-slate-500 text-sm font-medium">Words Learned</p>
+                        <p className="text-2xl font-bold mt-1 text-primary">{userProgress.reviewedCards}</p>
+                    </div>
+                    <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-primary/5 shadow-sm">
+                        <p className="text-slate-500 text-sm font-medium">Study Streak</p>
+                        <div className="flex items-center gap-2 mt-1 text-slate-900 dark:text-slate-100">
+                            <p className="text-2xl font-bold">{userProgress.streak} Days</p>
+                            <span className="material-symbols-outlined text-orange-400">local_fire_department</span>
+                        </div>
+                    </div>
+                    <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-primary/5 shadow-sm">
+                        <p className="text-slate-500 text-sm font-medium">Mastered</p>
+                        <p className="text-2xl font-bold mt-1 text-slate-900 dark:text-slate-100">{userProgress.masteredProgressPercent}%</p>
+                    </div>
+                </div>
+            )}
+
+
 
             {!isLoading && !error && (
-                <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <h2 className="text-base font-semibold text-slate-900">Tiến Độ Từng Bộ</h2>
-
+                <div className="mb-10">
                     {!decks.length && <p className="mt-2 text-sm text-slate-600">Bạn chưa có bộ nào. Hãy tạo bộ đầu tiên ở trên.</p>}
 
                     {!!decks.length && (
-                        <ul className="mt-3 space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {decks.map((deck) => {
                                 const stat = userProgress?.deckStats.find((item) => item.deckId === deck.id);
                                 const progressPercent = stat?.progressPercent ?? 0;
+                                const masteredPercent = stat?.masteredProgressPercent ?? 0;
 
                                 return (
-                                    <li key={deck.id} className="rounded-xl border border-slate-200 p-3">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <div className="flex-1">
-                                                <p className="text-sm font-semibold text-slate-900">{deck.name}</p>
-                                                <p className="mt-1 text-xs text-slate-500">
-                                                    {deck.cardCount} thẻ • Tab: {deck.sheetName}
-                                                </p>
-                                                {deck.description && <p className="mt-1 text-sm text-slate-600">{deck.description}</p>}
-                                                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
-                                                    <div className="h-full rounded-full bg-teal-600" style={{ width: `${progressPercent}%` }} />
-                                                </div>
-                                                <p className="mt-1 text-xs text-slate-600">
-                                                    Tiến độ: {progressPercent}% • Đã học: {stat?.reviewedCards ?? 0}/{stat?.totalCards ?? deck.cardCount}
-                                                </p>
-                                                <p className="mt-1 text-xs text-slate-500">
-                                                    Đã nhớ vững: {stat?.masteredCards ?? 0}/{stat?.totalCards ?? deck.cardCount} ({stat?.masteredProgressPercent ?? 0}%)
-                                                </p>
+                                    <div key={deck.id} className="group flex flex-col bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-primary/10 hover:border-primary/40 transition-all shadow-sm hover:shadow-xl">
+                                        <div className="h-40 bg-slate-100 dark:bg-slate-800 relative overflow-hidden">
+                                            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent"></div>
+                                            <div className="absolute inset-0 flex items-center justify-center opacity-20 group-hover:scale-110 transition-transform duration-500">
+                                                <span className="material-symbols-outlined text-[80px]">school</span>
                                             </div>
-                                            <div className="flex flex-col gap-2">
-                                                <Link
-                                                    href={`/flashcard/study/${deck.id}`}
-                                                    className="rounded-lg border border-teal-600 bg-teal-600 px-3 py-2 text-center text-sm font-semibold text-white transition hover:bg-teal-700"
-                                                >
-                                                    Học
-                                                </Link>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => void deleteDeck(deck.id, deck.name)}
-                                                    disabled={deletingDeckId === deck.id}
-                                                    className="rounded-lg border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
-                                                >
-                                                    {deletingDeckId === deck.id ? "Đang xóa..." : "Xóa"}
-                                                </button>
+                                            <div className="absolute bottom-4 left-4">
+                                                <span className="px-3 py-1 bg-primary/90 text-slate-900 text-xs font-bold rounded-full">{deck.sheetName}</span>
                                             </div>
                                         </div>
-                                    </li>
+                                        <div className="p-6 flex-1 flex flex-col">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 line-clamp-1">{deck.name}</h3>
+                                                <button 
+                                                    onClick={() => void deleteDeck(deck.id, deck.name)}
+                                                    disabled={deletingDeckId === deck.id}
+                                                    className="text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                                                    title="Xoá bộ này"
+                                                >
+                                                    <span className="material-symbols-outlined">delete</span>
+                                                </button>
+                                            </div>
+                                            <p className="text-sm text-slate-500 mb-6 line-clamp-2 min-h-[40px]">
+                                                {deck.description || "Không có mô tả"}
+                                            </p>
+                                            
+                                            <div className="space-y-3 mt-auto">
+                                                <div className="flex justify-between text-sm font-medium">
+                                                    <span className="text-slate-500 line-clamp-1 flex-1 mr-2">Đã học (khó + dễ)</span>
+                                                    <span className="text-primary truncate">{stat?.reviewedCards ?? 0} / {stat?.totalCards ?? deck.cardCount} thẻ</span>
+                                                </div>
+                                                <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progressPercent}%` }}></div>
+                                                </div>
+                                                
+                                                <div className="flex justify-between text-xs font-medium mt-1">
+                                                    <span className="text-slate-400 line-clamp-1 flex-1 mr-2">Đã thuộc (dễ)</span>
+                                                    <span className="text-emerald-500 truncate">{stat?.masteredCards ?? 0} / {stat?.totalCards ?? deck.cardCount} ({masteredPercent}%)</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="flex gap-2 w-full mt-6">
+                                                <Link href={`/flashcard/study/${deck.id}`} className="flex-1 py-3 bg-primary/10 hover:bg-primary text-primary hover:text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
+                                                    <span className="material-symbols-outlined">play_arrow</span>
+                                                    Study
+                                                </Link>
+                                                <Link href={`/flashcard/practice/${deck.id}`} className="flex-1 py-3 bg-indigo-50 hover:bg-indigo-500 text-indigo-600 hover:text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
+                                                    <span className="material-symbols-outlined">edit_square</span>
+                                                    Practice
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    </div>
                                 );
                             })}
-                        </ul>
+                        </div>
                     )}
-                </section>
+                </div>
             )}
         </main>
+        </div>
     );
 }

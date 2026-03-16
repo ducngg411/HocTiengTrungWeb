@@ -5,7 +5,6 @@ import Deck from "@/models/Deck";
 import User from "@/models/User";
 import UserCardProgress from "@/models/UserCardProgress";
 import { validateUsername } from "@/services/auth";
-import { getDifficultyLabel } from "@/services/progress";
 
 type RouteContext = {
     params: Promise<{ deckId: string }>;
@@ -52,8 +51,6 @@ export async function GET(request: Request, context: RouteContext) {
             cardId: string;
             reviewCount: number;
             lastReviewedAt?: Date | null;
-            nextReviewAt?: Date | null;
-            easeFactor: number;
             status: "new" | "learning" | "mastered";
             totalStudySeconds?: number;
         }>;
@@ -78,10 +75,7 @@ export async function GET(request: Request, context: RouteContext) {
                         return {
                             reviewCount: 0,
                             lastReviewedAt: null,
-                            nextReviewAt: null,
-                            easeFactor: 2.5,
                             status: "new",
-                            difficulty: "medium",
                             totalStudySeconds: 0,
                         };
                     }
@@ -89,10 +83,7 @@ export async function GET(request: Request, context: RouteContext) {
                     return {
                         reviewCount: progress.reviewCount,
                         lastReviewedAt: progress.lastReviewedAt ?? null,
-                        nextReviewAt: progress.nextReviewAt ?? null,
-                        easeFactor: progress.easeFactor,
                         status: progress.status,
-                        difficulty: getDifficultyLabel(progress.easeFactor),
                         totalStudySeconds: progress.totalStudySeconds ?? 0,
                     };
                 })(),

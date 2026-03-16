@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "migrate:remove-spaced-repetition": "node --env-file=.env.local scripts/remove-spaced-repetition-fields.mjs"
   },
   "dependencies": {
     "mongoose": "^8.23.0",

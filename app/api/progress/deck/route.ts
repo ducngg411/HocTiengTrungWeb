@@ -5,7 +5,7 @@ import Deck from "@/models/Deck";
 import User from "@/models/User";
 import UserCardProgress from "@/models/UserCardProgress";
 import { validateUsername } from "@/services/auth";
-import { getDifficultyLabel, toDateKey } from "@/services/progress";
+import { toDateKey } from "@/services/progress";
 
 export async function GET(request: Request) {
     try {
@@ -43,10 +43,7 @@ export async function GET(request: Request) {
             cardId: string;
             reviewCount: number;
             lastReviewedAt?: Date | null;
-            nextReviewAt?: Date | null;
-            easeFactor: number;
             status: "new" | "learning" | "mastered";
-            lastResult?: "hard" | "good" | "easy" | null;
         }>;
 
         const masteredCards = progressRows.filter((row) => row.status === "mastered").length;
@@ -59,23 +56,6 @@ export async function GET(request: Request) {
                 .filter((row) => row.lastReviewedAt && toDateKey(new Date(row.lastReviewedAt)) === todayKey)
                 .map((row) => String(row.cardId))
         ).size;
-
-        const now = new Date();
-        const dueCards = progressRows.filter((row) => row.nextReviewAt && new Date(row.nextReviewAt) <= now).length;
-
-        const hardCards = progressRows
-            .filter((row) => row.reviewCount > 0)
-            .map((row) => ({
-                cardId: String(row.cardId),
-                reviewCount: row.reviewCount,
-                status: row.status,
-                easeFactor: row.easeFactor,
-                difficulty: getDifficultyLabel(row.easeFactor),
-                lastReviewedAt: row.lastReviewedAt ?? null,
-                nextReviewAt: row.nextReviewAt ?? null,
-            }))
-            .sort((a, b) => a.easeFactor - b.easeFactor)
-            .slice(0, 10);
 
         const progressPercent = totalCards > 0 ? Math.round((reviewedCards / totalCards) * 100) : 0;
         const masteredProgressPercent = totalCards > 0 ? Math.round((masteredCards / totalCards) * 100) : 0;
@@ -90,10 +70,8 @@ export async function GET(request: Request) {
             unseenCards: Math.max(totalCards - reviewedCards, 0),
             remainingCards: Math.max(totalCards - masteredCards, 0),
             todayStudied,
-            dueCards,
             progressPercent,
             masteredProgressPercent,
-            hardCards,
         });
     } catch (error) {
         const message = error instanceof Error ? error.message : "Failed to fetch deck progress";
