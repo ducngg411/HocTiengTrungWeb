@@ -64,14 +64,16 @@ export async function GET(request: Request) {
         // ── Primary: UserCardProgress.firstLearnedAt (set on first ever review) ──
         // Covers both easy and hard actions. Naturally rolls over at midnight.
         type ProgressRow = { cardId: { toString(): string } };
-        const [progressToday, progressYesterday, lastLearnSession] = await Promise.all([
+        type LastSessionRow = { reviewedCardIds: { toString(): string }[]; startedAt: Date } | null;
+
+        const [rawToday, rawYesterday, rawLastSession] = await Promise.all([
             UserCardProgress.find({
                 userId: user._id,
                 deckId: deck._id,
                 firstLearnedAt: { $gte: todayStart, $lt: tomorrowStart },
             })
                 .select("cardId")
-                .lean() as Promise<ProgressRow[]>,
+                .lean(),
 
             UserCardProgress.find({
                 userId: user._id,
@@ -79,14 +81,18 @@ export async function GET(request: Request) {
                 firstLearnedAt: { $gte: yesterdayStart, $lt: todayStart },
             })
                 .select("cardId")
-                .lean() as Promise<ProgressRow[]>,
+                .lean(),
 
             // Last session: use reviewedCardIds (actually reviewed), not plannedCardIds
             LearningSession.findOne({ userId: user._id, deckId: deck._id, type: "learn" })
                 .sort({ startedAt: -1 })
                 .select("reviewedCardIds startedAt")
-                .lean() as Promise<{ reviewedCardIds: { toString(): string }[]; startedAt: Date } | null>,
+                .lean(),
         ]);
+
+        const progressToday = rawToday as unknown as ProgressRow[];
+        const progressYesterday = rawYesterday as unknown as ProgressRow[];
+        const lastLearnSession = rawLastSession as unknown as LastSessionRow;
 
         const progressTodayIds = progressToday.map((p) => p.cardId.toString());
         const progressYesterdayIds = progressYesterday.map((p) => p.cardId.toString());
@@ -129,7 +135,7 @@ export async function GET(request: Request) {
             reviewCount: { $gt: 0 },
         })
             .select("cardId")
-            .lean()) as { cardId: { toString(): string } }[];
+            .lean()) as unknown as { cardId: { toString(): string } }[];
 
         const allLearnedCardIds = learnedProgress.map((p) => p.cardId.toString());
 
