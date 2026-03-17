@@ -22,6 +22,7 @@ export const translations: Record<Language, TranslationDictionary> = {
             meaning: "Nghĩa",
             examplePinyin: "Ví Dụ & Phiên Âm",
             listen: "Nghe",
+            noMeaning: "không có nghĩa",
         },
         login: {
             title: "Đăng Nhập",
@@ -130,7 +131,7 @@ export const translations: Record<Language, TranslationDictionary> = {
             modes: {
                 writing: {
                     title: "Luyện Viết",
-                    desc: "Gồm Typing Recall và Sentence Writing được AI chấm điểm."
+                    desc: "Gồm Nhớ lại phím gõ (Typing Recall) và Ghép câu AI (Sentence Writing + AI)."
                 },
                 sentence: {
                     title: "Ghép Câu",
@@ -149,8 +150,8 @@ export const translations: Record<Language, TranslationDictionary> = {
             writing: {
                 title: "Luyện viết ký tự",
                 subModes: {
-                    typing: "Typing Recall",
-                    sentence: "Sentence Writing + AI",
+                    typing: "Nhớ phím (Typing Recall)",
+                    sentence: "Ghép câu AI (Sentence Writing)",
                 },
                 prompt: "Gõ chính xác nghĩa của",
                 hint: "Gợi ý",
@@ -181,7 +182,9 @@ export const translations: Record<Language, TranslationDictionary> = {
                 },
                 chooseWord: "Chọn từ muốn đặt câu",
                 loadingExercise: "Đang tạo bài tập câu...",
-                instruction: "Đề bài",
+                instructionLabel: "Đề bài",
+                instructionNormal: "Hãy viết một câu tiếng Trung tự nhiên sử dụng từ \"{word}\" ({meaning}).",
+                instructionTranslation: "Dịch sang tiếng Trung: \"{text}\"",
                 sourceText: "Câu gốc",
                 inputPlaceholder: "Viết câu tiếng Trung của bạn...",
                 submit: "Chấm bằng AI",
@@ -194,6 +197,12 @@ export const translations: Record<Language, TranslationDictionary> = {
                 feedback: "Nhận xét",
                 noFeedback: "Không có nhận xét thêm",
                 suggestion: "Câu gợi ý",
+                apiKeysLabel: "API Keys:",
+                activeKey: " (đang dùng)",
+                requests: "yêu cầu",
+                switchKey: "⇄ Đổi key",
+                switchingKey: "...",
+                skipKeyTooltip: "Bỏ qua key hiện tại và chuyển sang key tiếp theo",
             }
         },
         flashcard: {
@@ -228,6 +237,7 @@ export const translations: Record<Language, TranslationDictionary> = {
             meaning: "Meaning",
             examplePinyin: "Example & Pinyin",
             listen: "Listen",
+            noMeaning: "no meaning",
         },
         login: {
             title: "Log In",
@@ -387,7 +397,9 @@ export const translations: Record<Language, TranslationDictionary> = {
                 },
                 chooseWord: "Choose a target word",
                 loadingExercise: "Generating sentence exercise...",
-                instruction: "Instruction",
+                instructionLabel: "Instruction",
+                instructionNormal: "Write a natural Chinese sentence using the word \"{word}\" ({meaning}).",
+                instructionTranslation: "Translate into Chinese: \"{text}\"",
                 sourceText: "Source sentence",
                 inputPlaceholder: "Write your Chinese sentence...",
                 submit: "Grade with AI",
@@ -400,6 +412,12 @@ export const translations: Record<Language, TranslationDictionary> = {
                 feedback: "Feedback",
                 noFeedback: "No additional feedback",
                 suggestion: "Suggested sentence",
+                apiKeysLabel: "API Keys:",
+                activeKey: " (active)",
+                requests: "requests",
+                switchKey: "⇄ Switch key",
+                switchingKey: "...",
+                skipKeyTooltip: "Skip current key and move to the next one",
             }
         },
         flashcard: {
@@ -434,6 +452,7 @@ export const translations: Record<Language, TranslationDictionary> = {
             meaning: "意思",
             examplePinyin: "例句及拼音",
             listen: "听",
+            noMeaning: "无含义",
         },
         login: {
             title: "登录",
@@ -542,7 +561,7 @@ export const translations: Record<Language, TranslationDictionary> = {
             modes: {
                 writing: {
                     title: "书写练习",
-                    desc: "包含 Typing Recall 和 AI 评分造句。"
+                    desc: "包含键盘拼写回忆 (Typing Recall) 和 AI 评分造句 (Sentence Writing)。"
                 },
                 sentence: {
                     title: "造句",
@@ -561,8 +580,8 @@ export const translations: Record<Language, TranslationDictionary> = {
             writing: {
                 title: "汉字书写练习",
                 subModes: {
-                    typing: "Typing Recall",
-                    sentence: "造句 + AI",
+                    typing: "拼写回忆 (Typing Recall)",
+                    sentence: "造句 + AI (Sentence Writing)",
                 },
                 prompt: "输入确切的含义",
                 hint: "提示",
@@ -593,7 +612,9 @@ export const translations: Record<Language, TranslationDictionary> = {
                 },
                 chooseWord: "选择要造句的词",
                 loadingExercise: "正在生成句子练习...",
-                instruction: "题目",
+                instructionLabel: "题目",
+                instructionNormal: "请使用词语“{word}”({meaning})写一个自然地道的中文句子。",
+                instructionTranslation: "翻译成中文：“{text}”",
                 sourceText: "原句",
                 inputPlaceholder: "请输入你的中文句子...",
                 submit: "AI 评分",
@@ -606,6 +627,12 @@ export const translations: Record<Language, TranslationDictionary> = {
                 feedback: "反馈",
                 noFeedback: "暂无额外反馈",
                 suggestion: "建议句子",
+                apiKeysLabel: "API 密钥：",
+                activeKey: " (使用中)",
+                requests: "次请求",
+                switchKey: "⇄ 切换密钥",
+                switchingKey: "...",
+                skipKeyTooltip: "跳过当前密钥并转到下一个",
             }
         },
         flashcard: {

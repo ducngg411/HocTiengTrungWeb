@@ -22,6 +22,129 @@ export type SentenceGradingResult = {
 
 const sentenceGradingCache = new Map<string, SentenceGradingResult>();
 
+// ===================== Gemini Key Rotation Manager =====================
+
+const DAILY_LIMIT = Number(process.env.GEMINI_DAILY_LIMIT ?? "20");
+
+function getTodayDateString(): string {
+    return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+}
+
+type KeyState = {
+    key: string;
+    usageToday: number;
+    date: string;
+};
+
+function loadGeminiKeys(): string[] {
+    // Hỗ trợ cả GEMINI_API_KEYS và GEMINI_API_KEY dạng comma-separated
+    for (const envVar of [process.env.GEMINI_API_KEYS, process.env.GEMINI_API_KEY]) {
+        if (envVar) {
+            const keys = envVar.split(",").map((k) => k.trim()).filter(Boolean);
+            if (keys.length > 0) return keys;
+        }
+    }
+    return [];
+}
+
+// --------------------------------------------------------------------------
+// Global singleton: survives Next.js hot-module-reload in dev AND ensures
+// all API routes (e.g. /api/gemini/keys and /api/practice/sentence) always
+// reference the exact same counter array within the same Node.js process.
+// Pattern mirrors the official Next.js MongoDB connection singleton.
+// --------------------------------------------------------------------------
+type GeminiGlobal = {
+    __geminiKeyStates?: KeyState[];
+    __geminiDailyLimit?: number;
+};
+const _g = global as typeof global & GeminiGlobal;
+
+function initGeminiKeyStates(): KeyState[] {
+    return loadGeminiKeys().map((key) => ({
+        key,
+        usageToday: 0,
+        date: getTodayDateString(),
+    }));
+}
+
+if (!_g.__geminiKeyStates || _g.__geminiKeyStates.length === 0) {
+    _g.__geminiKeyStates = initGeminiKeyStates();
+}
+
+// If DAILY_LIMIT changed between reloads, keep it in sync on global too
+if (_g.__geminiDailyLimit !== DAILY_LIMIT) {
+    _g.__geminiDailyLimit = DAILY_LIMIT;
+}
+
+const geminiKeyStates: KeyState[] = _g.__geminiKeyStates;
+
+function getAvailableGeminiKey(): string {
+    const today = getTodayDateString();
+    for (const state of geminiKeyStates) {
+        if (state.date !== today) {
+            state.usageToday = 0;
+            state.date = today;
+        }
+    }
+    const available = geminiKeyStates.find((s) => s.usageToday < DAILY_LIMIT);
+    if (!available) {
+        const status = geminiKeyStates
+            .map((s) => `...${s.key.slice(-6)}: ${s.usageToday}/${DAILY_LIMIT}`)
+            .join(", ");
+        throw new Error(`All Gemini API keys exhausted for today. [${status}]`);
+    }
+    return available.key;
+}
+
+function incrementGeminiKeyUsage(key: string): void {
+    const state = geminiKeyStates.find((s) => s.key === key);
+    if (state) state.usageToday++;
+}
+
+function markGeminiKeyExhausted(key: string): void {
+    const state = geminiKeyStates.find((s) => s.key === key);
+    if (state) {
+        state.usageToday = DAILY_LIMIT;
+        console.warn(`[Gemini] Key ...${key.slice(-6)} exhausted (429), rotating to next key.`);
+    }
+}
+
+export function getGeminiKeyStatus(): Array<{
+    keySuffix: string;
+    usageToday: number;
+    limit: number;
+    exhausted: boolean;
+}> {
+    const today = getTodayDateString();
+    return geminiKeyStates.map((s) => ({
+        keySuffix: `...${s.key.slice(-6)}`,
+        usageToday: s.date === today ? s.usageToday : 0,
+        limit: DAILY_LIMIT,
+        exhausted: s.date === today ? s.usageToday >= DAILY_LIMIT : false,
+    }));
+}
+
+/**
+ * Bỏ qua key đang hoạt động (key đầu tiên chưa exhausted).
+ * Dùng khi user bấm nút "Đổi key" thủ công.
+ */
+export function skipCurrentGeminiKey(): { skipped: string | null } {
+    const today = getTodayDateString();
+    for (const state of geminiKeyStates) {
+        if (state.date !== today) {
+            state.usageToday = 0;
+            state.date = today;
+        }
+    }
+    const current = geminiKeyStates.find((s) => s.usageToday < DAILY_LIMIT);
+    if (!current) return { skipped: null };
+    current.usageToday = DAILY_LIMIT;
+    console.warn(`[Gemini] Key ...${current.key.slice(-6)} manually skipped.`);
+    return { skipped: `...${current.key.slice(-6)}` };
+}
+
+// =======================================================================
+
 function clampScore(value: unknown): number {
     const parsed = typeof value === "number" ? value : Number(value);
     if (Number.isNaN(parsed)) return 0;
@@ -113,9 +236,8 @@ function buildPrompt(input: SentenceGradingInput): string {
 }
 
 export async function gradeSentenceWithGemini(input: SentenceGradingInput): Promise<SentenceGradingResult> {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-        throw new Error("Missing GEMINI_API_KEY environment variable");
+    if (geminiKeyStates.length === 0) {
+        throw new Error("No Gemini API keys configured. Set GEMINI_API_KEYS or GEMINI_API_KEY in .env.local.");
     }
 
     const cacheKey = JSON.stringify({
@@ -134,108 +256,116 @@ export async function gradeSentenceWithGemini(input: SentenceGradingInput): Prom
     }
 
     const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
-
-    try {
-        const response = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            signal: controller.signal,
-            body: JSON.stringify({
-                contents: [
-                    {
-                        parts: [{ text: buildPrompt(input) }],
-                    },
-                ],
-                generationConfig: {
-                    temperature: 0.2,
-                    maxOutputTokens: 1024,
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "object",
-                        properties: {
-                            usage_score: { type: "number" },
-                            grammar_score: { type: "number" },
-                            naturalness_score: { type: "number" },
-                            correct_usage: { type: "boolean" },
-                            grammar_feedback: { type: "string" },
-                            improved_sentence: { type: "string" },
-                            improved_pinyin: { type: "string" },
-                            improved_meaning: { type: "string" },
-                            feedback: { type: "string" },
-                        },
-                        required: ["usage_score", "grammar_score", "naturalness_score", "correct_usage", "grammar_feedback", "improved_sentence", "improved_pinyin", "improved_meaning", "feedback"],
-                    },
+    const requestBody = JSON.stringify({
+        contents: [{ parts: [{ text: buildPrompt(input) }] }],
+        generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 1024,
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: "object",
+                properties: {
+                    usage_score: { type: "number" },
+                    grammar_score: { type: "number" },
+                    naturalness_score: { type: "number" },
+                    correct_usage: { type: "boolean" },
+                    grammar_feedback: { type: "string" },
+                    improved_sentence: { type: "string" },
+                    improved_pinyin: { type: "string" },
+                    improved_meaning: { type: "string" },
+                    feedback: { type: "string" },
                 },
-            }),
-        });
+                required: ["usage_score", "grammar_score", "naturalness_score", "correct_usage", "grammar_feedback", "improved_sentence", "improved_pinyin", "improved_meaning", "feedback"],
+            },
+        },
+    });
 
-        if (!response.ok) {
-            const body = await response.text();
-            throw new Error(`Gemini API failed: ${response.status} ${body}`);
-        }
+    let lastError: Error = new Error("All Gemini API keys exhausted for today.");
 
-        const payload = (await response.json()) as {
-            candidates?: Array<{
-                content?: {
-                    parts?: Array<{ text?: string }>;
-                };
-            }>;
-        };
+    for (let attempt = 0; attempt < geminiKeyStates.length; attempt++) {
+        const apiKey = getAvailableGeminiKey();
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 20000);
 
-        const rawText = payload.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (!rawText) {
-            throw new Error("Gemini returned empty response");
-        }
-
-        console.log("[Gemini] raw response text:", rawText);
-
-        let parsed: {
-            usage_score?: unknown;
-            grammar_score?: unknown;
-            naturalness_score?: unknown;
-            correct_usage?: unknown;
-            grammar_feedback?: unknown;
-            improved_sentence?: unknown;
-            improved_pinyin?: unknown;
-            improved_meaning?: unknown;
-            feedback?: unknown;
-        };
-        const extracted = extractJsonObject(rawText);
         try {
-            parsed = JSON.parse(extracted);
-        } catch {
-            // Thử repair nếu JSON bị truncated
-            const repaired = repairJson(extracted);
-            console.warn("[Gemini] JSON truncated, attempting repair. Repaired:\n", repaired);
-            try {
-                parsed = JSON.parse(repaired);
-            } catch (parseErr) {
-                console.error("[Gemini] JSON parse failed after repair. Raw text was:\n", rawText);
-                throw new Error(`Gemini response JSON parse error: ${(parseErr as Error).message}\nRaw: ${rawText.slice(0, 300)}`);
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                signal: controller.signal,
+                body: requestBody,
+            });
+
+            if (response.status === 429) {
+                markGeminiKeyExhausted(apiKey);
+                lastError = new Error(`Gemini key ...${apiKey.slice(-6)} quota exceeded (429), rotating.`);
+                continue;
             }
+
+            // Gemini tính quota cho mọi request đến được server — increment trước khi kiểm tra ok
+            incrementGeminiKeyUsage(apiKey);
+
+            if (!response.ok) {
+                const body = await response.text();
+                throw new Error(`Gemini API failed: ${response.status} ${body}`);
+            }
+
+            const payload = (await response.json()) as {
+                candidates?: Array<{
+                    content?: { parts?: Array<{ text?: string }> };
+                }>;
+            };
+
+            const rawText = payload.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+            if (!rawText) {
+                throw new Error("Gemini returned empty response");
+            }
+
+            console.log(`[Gemini] key ...${apiKey.slice(-6)} responded (attempt ${attempt + 1}):`, rawText);
+
+            let parsed: {
+                usage_score?: unknown;
+                grammar_score?: unknown;
+                naturalness_score?: unknown;
+                correct_usage?: unknown;
+                grammar_feedback?: unknown;
+                improved_sentence?: unknown;
+                improved_pinyin?: unknown;
+                improved_meaning?: unknown;
+                feedback?: unknown;
+            };
+            const extracted = extractJsonObject(rawText);
+            try {
+                parsed = JSON.parse(extracted);
+            } catch {
+                const repaired = repairJson(extracted);
+                console.warn("[Gemini] JSON truncated, attempting repair. Repaired:\n", repaired);
+                try {
+                    parsed = JSON.parse(repaired);
+                } catch (parseErr) {
+                    console.error("[Gemini] JSON parse failed after repair. Raw text was:\n", rawText);
+                    throw new Error(`Gemini response JSON parse error: ${(parseErr as Error).message}\nRaw: ${rawText.slice(0, 300)}`);
+                }
+            }
+
+            const result: SentenceGradingResult = {
+                usageScore: clampScore(parsed.usage_score),
+                grammarScore: clampScore(parsed.grammar_score),
+                naturalnessScore: clampScore(parsed.naturalness_score),
+                correctUsage: Boolean(parsed.correct_usage),
+                grammarFeedback: typeof parsed.grammar_feedback === "string" ? parsed.grammar_feedback : "",
+                improvedSentence: typeof parsed.improved_sentence === "string" ? parsed.improved_sentence : "",
+                improvedPinyin: typeof parsed.improved_pinyin === "string" ? parsed.improved_pinyin : "",
+                improvedMeaning: typeof parsed.improved_meaning === "string" ? parsed.improved_meaning : "",
+                feedback: typeof parsed.feedback === "string" ? parsed.feedback : "",
+            };
+
+            sentenceGradingCache.set(cacheKey, result);
+            return result;
+        } finally {
+            clearTimeout(timeout);
         }
-
-        const result: SentenceGradingResult = {
-            usageScore: clampScore(parsed.usage_score),
-            grammarScore: clampScore(parsed.grammar_score),
-            naturalnessScore: clampScore(parsed.naturalness_score),
-            correctUsage: Boolean(parsed.correct_usage),
-            grammarFeedback: typeof parsed.grammar_feedback === "string" ? parsed.grammar_feedback : "",
-            improvedSentence: typeof parsed.improved_sentence === "string" ? parsed.improved_sentence : "",
-            improvedPinyin: typeof parsed.improved_pinyin === "string" ? parsed.improved_pinyin : "",
-            improvedMeaning: typeof parsed.improved_meaning === "string" ? parsed.improved_meaning : "",
-            feedback: typeof parsed.feedback === "string" ? parsed.feedback : "",
-        };
-
-        sentenceGradingCache.set(cacheKey, result);
-        return result;
-    } finally {
-        clearTimeout(timeout);
     }
+
+    throw lastError;
 }

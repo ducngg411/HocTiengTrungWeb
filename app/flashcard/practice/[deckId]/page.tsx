@@ -75,6 +75,13 @@ type SentenceSubmitResult = {
     improvedMeaning: string;
 };
 
+type GeminiKeyInfo = {
+    keySuffix: string;
+    usageToday: number;
+    limit: number;
+    exhausted: boolean;
+};
+
 export default function PracticeDeckPage() {
     const router = useRouter();
     const params = useParams<{ deckId: string }>();
@@ -110,6 +117,10 @@ export default function PracticeDeckPage() {
     const [isSentenceLoading, setIsSentenceLoading] = useState(false);
     const [isSentenceSubmitting, setIsSentenceSubmitting] = useState(false);
 
+    // Gemini Key Status
+    const [geminiKeys, setGeminiKeys] = useState<GeminiKeyInfo[]>([]);
+    const [isSkippingKey, setIsSkippingKey] = useState(false);
+
     const inputRef = useRef<HTMLInputElement>(null);
 
     const logApiResult = (api: string, status: number, payload: unknown) => {
@@ -120,6 +131,34 @@ export default function PracticeDeckPage() {
         });
     };
 
+    const fetchGeminiKeyStatus = async () => {
+        try {
+            const res = await fetch("/api/gemini/keys");
+            if (res.ok) {
+                const data = (await res.json()) as { keys: GeminiKeyInfo[] };
+                setGeminiKeys(data.keys);
+            }
+        } catch {
+            // không cần xử lý lỗi UI cho phần này
+        }
+    };
+
+    const skipGeminiKey = async () => {
+        setIsSkippingKey(true);
+        try {
+            const res = await fetch("/api/gemini/keys", { method: "POST" });
+            if (res.ok) {
+                const data = (await res.json()) as { skipped: string | null; keys: GeminiKeyInfo[] };
+                setGeminiKeys(data.keys);
+                if (data.skipped) {
+                    console.log(`[Gemini] Manually skipped key ${data.skipped}`);
+                }
+            }
+        } finally {
+            setIsSkippingKey(false);
+        }
+    };
+
     useEffect(() => {
         const saved = getStoredUsername();
         if (!saved) {
@@ -127,6 +166,11 @@ export default function PracticeDeckPage() {
             return;
         }
         setUsername(saved);
+        void fetchGeminiKeyStatus();
+
+        // Auto-refresh key status every 10s so the counter stays in sync
+        const interval = setInterval(() => void fetchGeminiKeyStatus(), 10_000);
+        return () => clearInterval(interval);
     }, [router]);
 
     useEffect(() => {
@@ -289,6 +333,7 @@ export default function PracticeDeckPage() {
             }
 
             setSentenceResult(payload as SentenceSubmitResult);
+            void fetchGeminiKeyStatus();
         } catch (submitError) {
             const message = submitError instanceof Error ? submitError.message : t("common.error");
             setError(message);
@@ -583,8 +628,13 @@ export default function PracticeDeckPage() {
 
                                 {!isSentenceLoading && sentenceExercise && (
                                     <div className="rounded-2xl border border-primary/20 bg-white dark:bg-slate-900 p-5 shadow-sm">
-                                        <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">{t("practice.sentence.instruction")}</p>
-                                        <p className="text-slate-800 dark:text-slate-100 font-medium">{sentenceExercise.instruction}</p>
+                                        <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">{t("practice.sentence.instructionLabel")}</p>
+                                        <p className="text-slate-800 dark:text-slate-100 font-medium">
+                                            {sentenceExercise.mode === "translation" 
+                                                ? t("practice.sentence.instructionTranslation", { text: sentenceExercise.sourceText })
+                                                : t("practice.sentence.instructionNormal", { word: sentenceExercise.word, meaning: sentenceExercise.meaning || t("common.noMeaning") })
+                                            }
+                                        </p>
 
                                         {sentenceExercise.sourceText && (
                                             <div className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800 p-3">
@@ -593,24 +643,39 @@ export default function PracticeDeckPage() {
                                             </div>
                                         )}
 
-                                        <form onSubmit={submitSentenceAnswer} className="mt-4">
+                                        <form onSubmit={submitSentenceAnswer} className="mt-4 relative">
                                             <textarea
                                                 value={sentenceAnswer}
                                                 onChange={(e) => setSentenceAnswer(e.target.value)}
                                                 rows={4}
+                                                disabled={isSentenceSubmitting}
                                                 placeholder={t("practice.sentence.inputPlaceholder")}
-                                                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 disabled:bg-slate-50 dark:disabled:bg-slate-800/50"
                                             />
-                                            <div className="mt-3 flex flex-wrap gap-2">
+                                            {isSentenceSubmitting && (
+                                                <div className="absolute left-0 right-0 -bottom-2 h-1 overflow-hidden bg-primary/10 rounded-full mt-2">
+                                                    <div className="h-full bg-primary/80 animate-[indeterminate_1.5s_infinite_ease-in-out]"></div>
+                                                </div>
+                                            )}
+                                            
+                                            <div className="mt-4 flex flex-wrap gap-2">
                                                 <button
                                                     type="submit"
                                                     disabled={isSentenceSubmitting || !sentenceAnswer.trim()}
-                                                    className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-slate-900 disabled:opacity-50"
+                                                    className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-slate-900 disabled:opacity-50 transition-colors hover:bg-primary/90"
                                                 >
-                                                    {isSentenceSubmitting ? t("practice.sentence.submitting") : t("practice.sentence.submit")}
+                                                    {isSentenceSubmitting ? (
+                                                        <>
+                                                            <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                                                            {t("practice.sentence.submitting")}
+                                                        </>
+                                                    ) : (
+                                                        t("practice.sentence.submit")
+                                                    )}
                                                 </button>
                                                 <button
                                                     type="button"
+                                                    disabled={isSentenceSubmitting}
                                                     onClick={() => {
                                                         if (sentenceExerciseMode === "specific") {
                                                             void generateSentenceExercise("specific", specificCardId);
@@ -618,12 +683,63 @@ export default function PracticeDeckPage() {
                                                             void generateSentenceExercise(sentenceExerciseMode);
                                                         }
                                                     }}
-                                                    className="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-semibold"
+                                                    className="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
                                                 >
                                                     {t("practice.sentence.nextExercise")}
                                                 </button>
                                             </div>
                                         </form>
+                                    </div>
+                                )}
+
+                                {/* Gemini Key Status Widget (Redesigned) */}
+                                {geminiKeys.length > 0 && (
+                                    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-indigo-100 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-900/10 px-4 py-3 text-xs w-full">
+                                        <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-semibold shrink-0">
+                                            <span className="material-symbols-outlined text-[16px]">vpn_key</span>
+                                            {t("practice.sentence.apiKeysLabel")}
+                                        </div>
+                                        
+                                        <div className="flex flex-wrap gap-1.5 flex-1 min-w-[120px]">
+                                            {(() => {
+                                                const activeIdx = geminiKeys.findIndex((k) => !k.exhausted);
+                                                return geminiKeys.map((k, i) => (
+                                                    <span
+                                                        key={i}
+                                                        title={`${k.keySuffix} — ${k.usageToday}/${k.limit} ${t("practice.sentence.requests")}${i === activeIdx ? t("practice.sentence.activeKey") : ""}`}
+                                                        className={`rounded-md px-2 py-1 font-mono text-[11px] ring-1 ring-inset ${
+                                                            k.exhausted
+                                                                ? "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 ring-slate-200 dark:ring-slate-700 line-through opacity-70"
+                                                                : i === activeIdx
+                                                                ? "bg-primary text-slate-900 ring-primary/50 font-bold shadow-sm"
+                                                                : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 ring-slate-200 dark:ring-slate-700"
+                                                        }`}
+                                                    >
+                                                        K{i + 1} <span className="opacity-75 font-normal ml-0.5">{k.usageToday}/{k.limit}</span>
+                                                    </span>
+                                                ));
+                                            })()}
+                                        </div>
+                                        
+                                        <button
+                                            type="button"
+                                            onClick={() => void skipGeminiKey()}
+                                            disabled={isSkippingKey || geminiKeys.every((k) => k.exhausted)}
+                                            title={t("practice.sentence.skipKeyTooltip")}
+                                            className="ml-auto flex items-center gap-1 rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 disabled:opacity-50 disabled:cursor-not-allowed shrink-0 transition-colors shadow-sm"
+                                        >
+                                            {isSkippingKey ? (
+                                                <>
+                                                    <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
+                                                    {t("practice.sentence.switchingKey")}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="material-symbols-outlined text-[14px]">swap_horiz</span>
+                                                    {t("practice.sentence.switchKey").replace("⇄ ", "")}
+                                                </>
+                                            )}
+                                        </button>
                                     </div>
                                 )}
 
@@ -665,6 +781,11 @@ export default function PracticeDeckPage() {
                     25% { transform: translateX(-8px); }
                     50% { transform: translateX(8px); }
                     75% { transform: translateX(-8px); }
+                }
+                @keyframes indeterminate {
+                    0% { transform: translateX(-100%) scaleX(0.2); }
+                    20% { transform: translateX(-50%) scaleX(0.5); }
+                    100% { transform: translateX(100%) scaleX(0.2); }
                 }
             `}} />
         </div>
