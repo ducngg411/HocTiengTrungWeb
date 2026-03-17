@@ -130,11 +130,11 @@ export const translations: Record<Language, TranslationDictionary> = {
             modes: {
                 writing: {
                     title: "Luyện Viết",
-                    desc: "Gõ chữ Hán/Pinyin dựa trên nghĩa gốc để ghi nhớ sâu cách viết."
+                    desc: "Gồm Typing Recall và Sentence Writing được AI chấm điểm."
                 },
                 sentence: {
-                    title: "Ghép Câu (Tương lai)",
-                    desc: "Sắp xếp các từ vựng lại thành một câu hoàn chỉnh."
+                    title: "Ghép Câu",
+                    desc: "Đặt câu với từ vựng và nhận phản hồi từ AI."
                 },
                 quiz: {
                     title: "Trắc Nghiệm (Tương lai)",
@@ -148,6 +148,10 @@ export const translations: Record<Language, TranslationDictionary> = {
             comingSoon: "Sắp ra mắt",
             writing: {
                 title: "Luyện viết ký tự",
+                subModes: {
+                    typing: "Typing Recall",
+                    sentence: "Sentence Writing + AI",
+                },
                 prompt: "Gõ chính xác nghĩa của",
                 hint: "Gợi ý",
                 inputPlaceholder: "Gõ Hanzi...",
@@ -167,6 +171,29 @@ export const translations: Record<Language, TranslationDictionary> = {
                 rewriteBtn: "Viết lại",
                 clearBtn: "Xóa bảng",
                 showOrderBtn: "Xem thứ tự nét",
+            },
+            sentence: {
+                modeLabel: "Dạng bài",
+                modes: {
+                    specific: "Từ chỉ định",
+                    random: "Từ ngẫu nhiên",
+                    translation: "Dịch câu",
+                },
+                chooseWord: "Chọn từ muốn đặt câu",
+                loadingExercise: "Đang tạo bài tập câu...",
+                instruction: "Đề bài",
+                sourceText: "Câu gốc",
+                inputPlaceholder: "Viết câu tiếng Trung của bạn...",
+                submit: "Chấm bằng AI",
+                submitting: "Đang chấm...",
+                nextExercise: "Bài khác",
+                score: "Điểm",
+                usage: "Dùng từ",
+                grammar: "Ngữ pháp",
+                naturalness: "Tự nhiên",
+                feedback: "Nhận xét",
+                noFeedback: "Không có nhận xét thêm",
+                suggestion: "Câu gợi ý",
             }
         },
         flashcard: {
@@ -309,11 +336,11 @@ export const translations: Record<Language, TranslationDictionary> = {
             modes: {
                 writing: {
                     title: "Writing Practice",
-                    desc: "Type Hanzi/Pinyin based on meaning for deep memorization."
+                    desc: "Includes Typing Recall and AI-graded Sentence Writing."
                 },
                 sentence: {
                     title: "Sentence Building",
-                    desc: "Arrange vocabulary into a complete sentence."
+                    desc: "Write sentences and get AI feedback."
                 },
                 quiz: {
                     title: "Quiz",
@@ -327,6 +354,10 @@ export const translations: Record<Language, TranslationDictionary> = {
             comingSoon: "Coming Soon",
             writing: {
                 title: "Character Writing Practice",
+                subModes: {
+                    typing: "Typing Recall",
+                    sentence: "Sentence Writing + AI",
+                },
                 prompt: "Type the exact meaning of",
                 hint: "Hint",
                 inputPlaceholder: "Type Hanzi...",
@@ -346,6 +377,29 @@ export const translations: Record<Language, TranslationDictionary> = {
                 rewriteBtn: "Rewrite",
                 clearBtn: "Clear Board",
                 showOrderBtn: "Show stroke order",
+            },
+            sentence: {
+                modeLabel: "Exercise type",
+                modes: {
+                    specific: "Specific word",
+                    random: "Random word",
+                    translation: "Sentence translation",
+                },
+                chooseWord: "Choose a target word",
+                loadingExercise: "Generating sentence exercise...",
+                instruction: "Instruction",
+                sourceText: "Source sentence",
+                inputPlaceholder: "Write your Chinese sentence...",
+                submit: "Grade with AI",
+                submitting: "Grading...",
+                nextExercise: "Next exercise",
+                score: "Score",
+                usage: "Vocabulary usage",
+                grammar: "Grammar",
+                naturalness: "Naturalness",
+                feedback: "Feedback",
+                noFeedback: "No additional feedback",
+                suggestion: "Suggested sentence",
             }
         },
         flashcard: {
@@ -488,11 +542,11 @@ export const translations: Record<Language, TranslationDictionary> = {
             modes: {
                 writing: {
                     title: "书写练习",
-                    desc: "根据含义输入汉字/拼音以加深记忆。"
+                    desc: "包含 Typing Recall 和 AI 评分造句。"
                 },
                 sentence: {
                     title: "造句",
-                    desc: "将词汇排列成完整的句子。"
+                    desc: "用词造句并获取 AI 反馈。"
                 },
                 quiz: {
                     title: "测验",
@@ -506,6 +560,10 @@ export const translations: Record<Language, TranslationDictionary> = {
             comingSoon: "即将推出",
             writing: {
                 title: "汉字书写练习",
+                subModes: {
+                    typing: "Typing Recall",
+                    sentence: "造句 + AI",
+                },
                 prompt: "输入确切的含义",
                 hint: "提示",
                 inputPlaceholder: "输入汉字...",
@@ -525,6 +583,29 @@ export const translations: Record<Language, TranslationDictionary> = {
                 rewriteBtn: "重写",
                 clearBtn: "清除画板",
                 showOrderBtn: "查看笔顺",
+            },
+            sentence: {
+                modeLabel: "练习类型",
+                modes: {
+                    specific: "指定词语",
+                    random: "随机词语",
+                    translation: "句子翻译",
+                },
+                chooseWord: "选择要造句的词",
+                loadingExercise: "正在生成句子练习...",
+                instruction: "题目",
+                sourceText: "原句",
+                inputPlaceholder: "请输入你的中文句子...",
+                submit: "AI 评分",
+                submitting: "评分中...",
+                nextExercise: "下一题",
+                score: "分数",
+                usage: "用词",
+                grammar: "语法",
+                naturalness: "地道程度",
+                feedback: "反馈",
+                noFeedback: "暂无额外反馈",
+                suggestion: "建议句子",
             }
         },
         flashcard: {
@@ -550,13 +631,13 @@ export const translations: Record<Language, TranslationDictionary> = {
 export function getTranslation(dict: TranslationDictionary, keyStr: string): string {
     const keys = keyStr.split(".");
     let current: any = dict;
-    
+
     for (const key of keys) {
         if (current[key] === undefined) {
             return keyStr; // fallback to key string if not found
         }
         current = current[key];
     }
-    
+
     return typeof current === 'string' ? current : keyStr;
 }

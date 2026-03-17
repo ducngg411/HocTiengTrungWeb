@@ -47,7 +47,33 @@ type PracticeCard = {
     progress: CardProgress;
 };
 
-type PracticeMode = "writing" | "sentence" | "quiz" | "listening";
+type PracticeMode = "writing" | "quiz" | "listening";
+type WritingSubMode = "typing-recall" | "sentence-ai";
+type SentenceExerciseMode = "specific" | "random" | "translation";
+
+type SentenceExercise = {
+    exerciseId: string;
+    cardId: string;
+    mode: SentenceExerciseMode;
+    instruction: string;
+    sourceText: string;
+    expectedText: string;
+    word: string;
+    meaning: string;
+    pinyin: string;
+};
+
+type SentenceSubmitResult = {
+    score: number;
+    usageScore: number;
+    grammarScore: number;
+    naturalnessScore: number;
+    correctUsage: boolean;
+    feedback: string;
+    improvedSentence: string;
+    improvedPinyin: string;
+    improvedMeaning: string;
+};
 
 export default function PracticeDeckPage() {
     const router = useRouter();
@@ -58,22 +84,41 @@ export default function PracticeDeckPage() {
     const [username, setUsername] = useState("");
     const [deckName, setDeckName] = useState("Practice Deck");
     const [cards, setCards] = useState<PracticeCard[]>([]);
-    
+
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { t } = useLanguage();
-    
+
     // Practice Mode State
     const [selectedMode, setSelectedMode] = useState<PracticeMode | null>(null);
+    const [selectedWritingMode, setSelectedWritingMode] = useState<WritingSubMode>("typing-recall");
     const [cardIndex, setCardIndex] = useState(0);
-    
+
     // Writing Mode State
     const [inputValue, setInputValue] = useState("");
     const [showHint, setShowHint] = useState(false);
     const [answerState, setAnswerState] = useState<"idle" | "correct" | "incorrect">("idle");
     const [sessionScore, setSessionScore] = useState(0);
 
+    // Sentence AI Mode State
+    const [sentenceExerciseMode, setSentenceExerciseMode] = useState<SentenceExerciseMode>("random");
+    const [specificCardId, setSpecificCardId] = useState("");
+    const [sentenceExercise, setSentenceExercise] = useState<SentenceExercise | null>(null);
+    const [sentenceAnswer, setSentenceAnswer] = useState("");
+    const [sentenceResult, setSentenceResult] = useState<SentenceSubmitResult | null>(null);
+    const [sentenceStartedAt, setSentenceStartedAt] = useState<number>(Date.now());
+    const [isSentenceLoading, setIsSentenceLoading] = useState(false);
+    const [isSentenceSubmitting, setIsSentenceSubmitting] = useState(false);
+
     const inputRef = useRef<HTMLInputElement>(null);
+
+    const logApiResult = (api: string, status: number, payload: unknown) => {
+        console.log(`[Practice API] ${api}`, {
+            status,
+            payload,
+            at: new Date().toISOString(),
+        });
+    };
 
     useEffect(() => {
         const saved = getStoredUsername();
@@ -101,7 +146,7 @@ export default function PracticeDeckPage() {
 
                 const decksPayload = await decksResponse.json();
                 if (!decksResponse.ok || !Array.isArray(decksPayload)) throw new Error(t("common.error"));
-                
+
                 const selectedDeck = decksPayload.find((deck: any) => deck.id === deckId);
                 if (!selectedDeck) throw new Error(t("study.deckNotFound"));
 
@@ -144,6 +189,12 @@ export default function PracticeDeckPage() {
         }
     }, [cardIndex, selectedMode, answerState]);
 
+    useEffect(() => {
+        if (!specificCardId && cards.length > 0) {
+            setSpecificCardId(cards[0].id);
+        }
+    }, [cards, specificCardId]);
+
     const handleLogout = () => {
         clearStoredUsername();
         router.replace("/login");
@@ -154,9 +205,96 @@ export default function PracticeDeckPage() {
 
     const startMode = (mode: PracticeMode) => {
         setSelectedMode(mode);
+        setSelectedWritingMode("typing-recall");
         setCardIndex(0);
         setSessionScore(0);
+        setSentenceExercise(null);
+        setSentenceAnswer("");
+        setSentenceResult(null);
+        setSentenceStartedAt(Date.now());
         resetTurnState();
+    };
+
+    const generateSentenceExercise = async (mode: SentenceExerciseMode, cardId?: string) => {
+        if (!username || !deckId) return;
+
+        setIsSentenceLoading(true);
+        setSentenceResult(null);
+
+        try {
+            const response = await fetch("/api/practice/sentence/exercise", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    username,
+                    deckId,
+                    mode,
+                    cardId: mode === "specific" ? cardId : undefined,
+                }),
+            });
+
+            const payload = (await response.json()) as SentenceExercise | ApiError;
+            logApiResult("POST /api/practice/sentence/exercise", response.status, payload);
+            if (!response.ok || !("exerciseId" in payload)) {
+                throw new Error((payload as ApiError).error || t("common.error"));
+            }
+
+            setSentenceExercise(payload as SentenceExercise);
+            setSentenceAnswer("");
+            setSentenceStartedAt(Date.now());
+        } catch (exerciseError) {
+            const message = exerciseError instanceof Error ? exerciseError.message : t("common.error");
+            setError(message);
+        } finally {
+            setIsSentenceLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (selectedMode !== "writing" || selectedWritingMode !== "sentence-ai" || !username || !deckId) return;
+
+        if (sentenceExerciseMode === "specific") {
+            if (!specificCardId) return;
+            void generateSentenceExercise("specific", specificCardId);
+            return;
+        }
+
+        void generateSentenceExercise(sentenceExerciseMode);
+    }, [selectedMode, selectedWritingMode, sentenceExerciseMode, specificCardId, username, deckId]);
+
+    const submitSentenceAnswer = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!username || !sentenceExercise || !sentenceAnswer.trim()) return;
+
+        setIsSentenceSubmitting(true);
+
+        try {
+            const studySeconds = Math.max(1, Math.round((Date.now() - sentenceStartedAt) / 1000));
+
+            const response = await fetch("/api/practice/sentence", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    username,
+                    exerciseId: sentenceExercise.exerciseId,
+                    answer: sentenceAnswer,
+                    studySeconds,
+                }),
+            });
+
+            const payload = (await response.json()) as SentenceSubmitResult | ApiError;
+            logApiResult("POST /api/practice/sentence", response.status, payload);
+            if (!response.ok || !("score" in payload)) {
+                throw new Error((payload as ApiError).error || t("common.error"));
+            }
+
+            setSentenceResult(payload as SentenceSubmitResult);
+        } catch (submitError) {
+            const message = submitError instanceof Error ? submitError.message : t("common.error");
+            setError(message);
+        } finally {
+            setIsSentenceSubmitting(false);
+        }
     };
 
     const resetTurnState = () => {
@@ -176,7 +314,7 @@ export default function PracticeDeckPage() {
         if (answer === currentCard.content.hanzi) {
             setAnswerState("correct");
             setSessionScore(prev => prev + 1);
-            
+
             // Auto advance after 1 second
             setTimeout(() => {
                 setCardIndex(prev => prev + 1);
@@ -239,7 +377,7 @@ export default function PracticeDeckPage() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
                             {/* Available Mode */}
-                            <button 
+                            <button
                                 onClick={() => startMode("writing")}
                                 className="group flex flex-col p-6 rounded-3xl bg-white dark:bg-slate-800 border-2 border-transparent hover:border-indigo-500/20 shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 transition-all text-left relative overflow-hidden"
                             >
@@ -252,16 +390,6 @@ export default function PracticeDeckPage() {
                                 <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">{t("practice.modes.writing.title")}</h3>
                                 <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">{t("practice.modes.writing.desc")}</p>
                             </button>
-
-                            {/* Coming Soon Modes */}
-                            <div className="flex flex-col p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent opacity-60 relative overflow-hidden">
-                                <span className="absolute top-4 right-4 bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 text-[10px] font-bold uppercase px-2 py-1 rounded-full">{t("practice.comingSoon")}</span>
-                                <div className="size-14 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-400 flex items-center justify-center mb-4">
-                                    <span className="material-symbols-outlined text-3xl">view_timeline</span>
-                                </div>
-                                <h3 className="text-xl font-bold text-slate-600 dark:text-slate-300 mb-2">{t("practice.modes.sentence.title")}</h3>
-                                <p className="text-slate-400 text-sm font-medium">{t("practice.modes.sentence.desc")}</p>
-                            </div>
 
                             <div className="flex flex-col p-6 rounded-3xl bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent opacity-60 relative overflow-hidden">
                                 <span className="absolute top-4 right-4 bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300 text-[10px] font-bold uppercase px-2 py-1 rounded-full">{t("practice.comingSoon")}</span>
@@ -286,94 +414,252 @@ export default function PracticeDeckPage() {
 
                 {!isLoading && !error && selectedMode === "writing" && currentCard && (
                     <main className="flex-1 flex flex-col px-4 py-8 lg:px-8 max-w-2xl mx-auto w-full">
-                        {/* Progress Bar Top */}
-                        <div className="w-full flex items-center gap-4 mb-10 mt-2">
-                            <div className="text-indigo-400 dark:text-indigo-500 font-bold text-sm w-12 text-right">
-                                {cardIndex + 1}/{cards.length}
-                            </div>
-                            <div className="flex-1 h-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-full overflow-hidden">
-                                <div 
-                                    className="h-full bg-indigo-500 rounded-full transition-all duration-300 ease-out"
-                                    style={{ width: `${Math.min(100, Math.max(0, (cardIndex / cards.length) * 100))}%` }}
-                                ></div>
-                            </div>
-                            <div className="w-12 text-center text-xs font-bold text-slate-400">
-                                🎯 {sessionScore}
-                            </div>
+                        <div className="mb-6 inline-flex rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1 gap-1 self-start">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedWritingMode("typing-recall")}
+                                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${selectedWritingMode === "typing-recall"
+                                    ? "bg-indigo-600 text-white"
+                                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                    }`}
+                            >
+                                {t("practice.writing.subModes.typing")}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedWritingMode("sentence-ai")}
+                                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${selectedWritingMode === "sentence-ai"
+                                    ? "bg-indigo-600 text-white"
+                                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                    }`}
+                            >
+                                {t("practice.writing.subModes.sentence")}
+                            </button>
                         </div>
 
-                        {/* Writing Container */}
-                        <div className="flex flex-col items-center justify-center flex-1 w-full gap-8">
-                            
-                            <div className="text-center max-w-lg mb-4 flex flex-col items-center gap-3">
-                                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">{t("practice.writing.prompt")}</p>
-                                <h3 className="text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white leading-tight">
-                                    {currentCard.content.meaning}
-                                </h3>
-                                
-                                <div className="flex items-center gap-4 mt-2">
-                                    <AudioButton text={currentCard.content.hanzi} minimal={false} />
-                                    <button 
-                                        type="button" 
-                                        onClick={() => setShowHint(true)}
-                                        className="text-sm font-bold text-amber-500 bg-amber-50 hover:bg-amber-100 rounded-lg px-3 py-2 transition-colors flex items-center gap-1"
-                                    >
-                                        <span className="material-symbols-outlined text-[18px]">lightbulb</span> {t("practice.writing.hint")}
-                                    </button>
+                        {selectedWritingMode === "typing-recall" && (
+                            <>
+                                {/* Progress Bar Top */}
+                                <div className="w-full flex items-center gap-4 mb-10 mt-2">
+                                    <div className="text-indigo-400 dark:text-indigo-500 font-bold text-sm w-12 text-right">
+                                        {cardIndex + 1}/{cards.length}
+                                    </div>
+                                    <div className="flex-1 h-3 bg-indigo-50 dark:bg-indigo-900/30 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-indigo-500 rounded-full transition-all duration-300 ease-out"
+                                            style={{ width: `${Math.min(100, Math.max(0, (cardIndex / cards.length) * 100))}%` }}
+                                        ></div>
+                                    </div>
+                                    <div className="w-12 text-center text-xs font-bold text-slate-400">
+                                        🎯 {sessionScore}
+                                    </div>
                                 </div>
-                                
-                                {showHint && (
-                                    <div className="mt-4 px-6 py-3 bg-white/50 border border-slate-200 rounded-xl text-center shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                        <p className="text-slate-500 text-xs uppercase font-bold tracking-widest mb-1">{t("practice.writing.pinyin")}</p>
-                                        <p className="text-2xl font-bold text-primary">{currentCard.content.pinyin}</p>
+
+                                {/* Writing Container */}
+                                <div className="flex flex-col items-center justify-center flex-1 w-full gap-8">
+
+                                    <div className="text-center max-w-lg mb-4 flex flex-col items-center gap-3">
+                                        <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">{t("practice.writing.prompt")}</p>
+                                        <h3 className="text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white leading-tight">
+                                            {currentCard.content.meaning}
+                                        </h3>
+
+                                        <div className="flex items-center gap-4 mt-2">
+                                            <AudioButton text={currentCard.content.hanzi} minimal={false} />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowHint(true)}
+                                                className="text-sm font-bold text-amber-500 bg-amber-50 hover:bg-amber-100 rounded-lg px-3 py-2 transition-colors flex items-center gap-1"
+                                            >
+                                                <span className="material-symbols-outlined text-[18px]">lightbulb</span> {t("practice.writing.hint")}
+                                            </button>
+                                        </div>
+
+                                        {showHint && (
+                                            <div className="mt-4 px-6 py-3 bg-white/50 border border-slate-200 rounded-xl text-center shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                                <p className="text-slate-500 text-xs uppercase font-bold tracking-widest mb-1">{t("practice.writing.pinyin")}</p>
+                                                <p className="text-2xl font-bold text-primary">{currentCard.content.pinyin}</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <form onSubmit={handleWritingSubmit} className="w-full relative max-w-sm">
+                                        <input
+                                            ref={inputRef}
+                                            type="text"
+                                            value={inputValue}
+                                            onChange={(e) => setInputValue(e.target.value)}
+                                            placeholder={t("practice.writing.inputPlaceholder")}
+                                            className={`w-full text-center text-3xl py-6 px-4 rounded-2xl border-2 bg-white dark:bg-slate-900 shadow-sm transition-all focus:outline-none placeholder:text-slate-300 ${answerState === 'idle' ? 'border-indigo-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 text-slate-800 dark:text-slate-100' :
+                                                answerState === 'correct' ? 'border-green-500 bg-green-50 text-green-700 scale-105' :
+                                                    'border-red-500 bg-red-50 text-red-700 animate-[shake_0.4s_ease-in-out]'
+                                                }`}
+                                            autoComplete="off"
+                                            autoCorrect="off"
+                                            autoCapitalize="off"
+                                            spellCheck="false"
+                                            disabled={answerState === "correct"}
+                                        />
+
+                                        {/* Feedback Icons overlay */}
+                                        {answerState === "correct" && (
+                                            <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-green-500 text-3xl">check_circle</span>
+                                        )}
+                                        {answerState === "incorrect" && (
+                                            <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-red-500 text-3xl">cancel</span>
+                                        )}
+                                    </form>
+
+                                    {/* Skip / Next action manually (fallback if auto doesn't suit them or they want to skip) */}
+                                    {answerState === "idle" && (
+                                        <button type="button" onClick={() => {
+                                            setCardIndex(prev => prev + 1);
+                                            resetTurnState();
+                                        }} className="text-slate-400 font-bold hover:text-slate-600 transition-colors mt-8">
+                                            {t("practice.writing.skipCard")}
+                                        </button>
+                                    )}
+
+                                </div>
+                            </>
+                        )}
+
+                        {selectedWritingMode === "sentence-ai" && (
+                            <div className="flex flex-col gap-5">
+                                <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
+                                        {t("practice.sentence.modeLabel")}
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSentenceExerciseMode("specific")}
+                                            className={`px-3 py-2 rounded-lg text-sm font-semibold ${sentenceExerciseMode === "specific" ? "bg-primary text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                                                }`}
+                                        >
+                                            {t("practice.sentence.modes.specific")}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSentenceExerciseMode("random")}
+                                            className={`px-3 py-2 rounded-lg text-sm font-semibold ${sentenceExerciseMode === "random" ? "bg-primary text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                                                }`}
+                                        >
+                                            {t("practice.sentence.modes.random")}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSentenceExerciseMode("translation")}
+                                            className={`px-3 py-2 rounded-lg text-sm font-semibold ${sentenceExerciseMode === "translation" ? "bg-primary text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                                                }`}
+                                        >
+                                            {t("practice.sentence.modes.translation")}
+                                        </button>
+                                    </div>
+
+                                    {sentenceExerciseMode === "specific" && (
+                                        <div className="mt-4">
+                                            <label className="text-xs font-medium text-slate-500 block mb-2">{t("practice.sentence.chooseWord")}</label>
+                                            <select
+                                                value={specificCardId}
+                                                onChange={(e) => setSpecificCardId(e.target.value)}
+                                                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm"
+                                            >
+                                                {cards.map((card) => (
+                                                    <option key={card.id} value={card.id}>
+                                                        {card.content.hanzi} - {card.content.meaning}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {isSentenceLoading && (
+                                    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 text-center text-slate-500">
+                                        {t("practice.sentence.loadingExercise")}
+                                    </div>
+                                )}
+
+                                {!isSentenceLoading && sentenceExercise && (
+                                    <div className="rounded-2xl border border-primary/20 bg-white dark:bg-slate-900 p-5 shadow-sm">
+                                        <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-2">{t("practice.sentence.instruction")}</p>
+                                        <p className="text-slate-800 dark:text-slate-100 font-medium">{sentenceExercise.instruction}</p>
+
+                                        {sentenceExercise.sourceText && (
+                                            <div className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-800 p-3">
+                                                <p className="text-xs text-slate-500 mb-1">{t("practice.sentence.sourceText")}</p>
+                                                <p className="text-base font-semibold text-slate-800 dark:text-slate-100">{sentenceExercise.sourceText}</p>
+                                            </div>
+                                        )}
+
+                                        <form onSubmit={submitSentenceAnswer} className="mt-4">
+                                            <textarea
+                                                value={sentenceAnswer}
+                                                onChange={(e) => setSentenceAnswer(e.target.value)}
+                                                rows={4}
+                                                placeholder={t("practice.sentence.inputPlaceholder")}
+                                                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                            />
+                                            <div className="mt-3 flex flex-wrap gap-2">
+                                                <button
+                                                    type="submit"
+                                                    disabled={isSentenceSubmitting || !sentenceAnswer.trim()}
+                                                    className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-slate-900 disabled:opacity-50"
+                                                >
+                                                    {isSentenceSubmitting ? t("practice.sentence.submitting") : t("practice.sentence.submit")}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (sentenceExerciseMode === "specific") {
+                                                            void generateSentenceExercise("specific", specificCardId);
+                                                        } else {
+                                                            void generateSentenceExercise(sentenceExerciseMode);
+                                                        }
+                                                    }}
+                                                    className="rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-sm font-semibold"
+                                                >
+                                                    {t("practice.sentence.nextExercise")}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                )}
+
+                                {sentenceResult && (
+                                    <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-900/20 p-5">
+                                        <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{t("practice.sentence.score")}: {sentenceResult.score}/10</p>
+                                        <div className="mt-2 text-sm text-slate-700 dark:text-slate-200">
+                                            <p>✔ {t("practice.sentence.usage")}: {sentenceResult.usageScore}/10</p>
+                                            <p>⚠ {t("practice.sentence.grammar")}: {sentenceResult.grammarScore}/10</p>
+                                            <p>💡 {t("practice.sentence.naturalness")}: {sentenceResult.naturalnessScore}/10</p>
+                                        </div>
+                                        <p className="mt-3 text-sm text-slate-700 dark:text-slate-200">
+                                            <span className="font-semibold">{t("practice.sentence.feedback")}:</span> {sentenceResult.feedback || t("practice.sentence.noFeedback")}
+                                        </p>
+                                        {sentenceResult.improvedSentence && (
+                                            <div className="mt-3 rounded-xl bg-white/60 dark:bg-slate-800/60 border border-emerald-200 dark:border-emerald-700 p-3">
+                                                <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-1">{t("practice.sentence.suggestion")}</p>
+                                                <p className="text-base font-bold text-slate-800 dark:text-slate-100">{sentenceResult.improvedSentence}</p>
+                                                {sentenceResult.improvedPinyin && (
+                                                    <p className="text-sm text-slate-500 dark:text-slate-400 italic mt-0.5">{sentenceResult.improvedPinyin}</p>
+                                                )}
+                                                {sentenceResult.improvedMeaning && (
+                                                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-0.5">{sentenceResult.improvedMeaning}</p>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
-
-                            <form onSubmit={handleWritingSubmit} className="w-full relative max-w-sm">
-                                <input
-                                    ref={inputRef}
-                                    type="text"
-                                    value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
-                                    placeholder={t("practice.writing.inputPlaceholder")}
-                                    className={`w-full text-center text-3xl py-6 px-4 rounded-2xl border-2 bg-white dark:bg-slate-900 shadow-sm transition-all focus:outline-none placeholder:text-slate-300 ${
-                                        answerState === 'idle' ? 'border-indigo-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 text-slate-800 dark:text-slate-100' :
-                                        answerState === 'correct' ? 'border-green-500 bg-green-50 text-green-700 scale-105' :
-                                        'border-red-500 bg-red-50 text-red-700 animate-[shake_0.4s_ease-in-out]'
-                                    }`}
-                                    autoComplete="off"
-                                    autoCorrect="off"
-                                    autoCapitalize="off"
-                                    spellCheck="false"
-                                    disabled={answerState === "correct"}
-                                />
-                                
-                                {/* Feedback Icons overlay */}
-                                {answerState === "correct" && (
-                                    <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-green-500 text-3xl">check_circle</span>
-                                )}
-                                {answerState === "incorrect" && (
-                                    <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-red-500 text-3xl">cancel</span>
-                                )}
-                            </form>
-                            
-                            {/* Skip / Next action manually (fallback if auto doesn't suit them or they want to skip) */}
-                            {answerState === "idle" && (
-                                <button type="button" onClick={() => {
-                                    setCardIndex(prev => prev + 1);
-                                    resetTurnState();
-                                }} className="text-slate-400 font-bold hover:text-slate-600 transition-colors mt-8">
-                                    {t("practice.writing.skipCard")}
-                                </button>
-                            )}
-
-                        </div>
+                        )}
                     </main>
                 )}
             </div>
-            
-            <style dangerouslySetInnerHTML={{__html: `
+
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 @keyframes shake {
                     0%, 100% { transform: translateX(0); }
                     25% { transform: translateX(-8px); }

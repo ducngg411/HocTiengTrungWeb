@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     Bar,
@@ -18,6 +18,7 @@ import {
 import { clearStoredUsername, getStoredUsername } from "@/lib/client-auth";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import quotesData from "@/quotes";
 
 type DeckSummary = {
     id: string;
@@ -58,6 +59,11 @@ type ApiError = {
     error?: string;
 };
 
+type Quote = {
+    text: string;
+    author: string;
+};
+
 const PIE_COLORS = ["#0d9488", "#14b8a6"];
 
 export default function FlashcardDeckPage() {
@@ -71,6 +77,12 @@ export default function FlashcardDeckPage() {
     const [deletingDeckId, setDeletingDeckId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const { t } = useLanguage();
+
+    const randomQuote = useMemo(() => {
+        const quotes = Array.isArray(quotesData) ? (quotesData as Quote[]) : [];
+        if (quotes.length === 0) return null;
+        return quotes[Math.floor(Math.random() * quotes.length)];
+    }, []);
 
     useEffect(() => {
         const saved = getStoredUsername();
@@ -165,11 +177,11 @@ export default function FlashcardDeckPage() {
             <header className="sticky top-0 z-50 w-full border-b border-primary/10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 items-center justify-between">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
                             <div className="flex items-center justify-center size-10 rounded-lg bg-primary/20 text-primary">
                                 <span className="material-symbols-outlined">translate</span>
                             </div>
-                            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Học Tiếng Trung</h1>
+                            <h1 className="max-[420px]:hidden whitespace-nowrap text-base sm:text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Học Tiếng Trung</h1>
                         </div>
                         <div className="flex items-center gap-4">
                             <button className="p-2 text-slate-500 hover:bg-primary/10 hover:text-primary rounded-lg transition-colors">
@@ -179,7 +191,6 @@ export default function FlashcardDeckPage() {
                                 <span className="material-symbols-outlined">notifications</span>
                             </button>
                             <LanguageSwitcher />
-                            <div className="h-8 w-[1px] bg-slate-200 dark:bg-slate-800 mx-2"></div>
                             <button
                                 type="button"
                                 onClick={handleLogout}
@@ -198,138 +209,147 @@ export default function FlashcardDeckPage() {
                 </div>
             </header>
 
-        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+            <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
 
-            {isLoading && (
-                <section className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-600 shadow-sm">
-                    {t("common.loading")}
-                </section>
-            )}
+                {isLoading && (
+                    <section className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-600 shadow-sm">
+                        {t("common.loading")}
+                    </section>
+                )}
 
-            {!isLoading && error && (
-                <section className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center text-rose-700 shadow-sm">
-                    {error}
-                </section>
-            )}
+                {!isLoading && error && (
+                    <section className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center text-rose-700 shadow-sm">
+                        {error}
+                    </section>
+                )}
 
-            {/* Header Section */}
-            {!isLoading && !error && userProgress && (
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 mt-4">
-                    <div>
-                        <h2 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">{t("dashboard.myDecks")}</h2>
-                        <p className="mt-2 text-slate-500 dark:text-slate-400 max-w-md">
-                            {t("dashboard.learningActivity")}
+                {!isLoading && !error && randomQuote && (
+                    <section className="mb-6 rounded-2xl border border-primary/20 bg-primary/5 p-5 shadow-sm">
+                        <p className="text-sm leading-6 text-slate-700 dark:text-slate-200">"{randomQuote.text}"</p>
+                        <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-primary">
+                            {randomQuote.author}
                         </p>
-                    </div>
-                    <Link
-                        href="/flashcard/create"
-                        className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-slate-900 font-bold rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/20"
-                    >
-                        <span className="material-symbols-outlined">add_circle</span>
-                        <span>{t("dashboard.createDeck")}</span>
-                    </Link>
-                </div>
-            )}
+                    </section>
+                )}
 
-            {/* Stats Overview */}
-            {!isLoading && userProgress && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-                    <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-primary/5 shadow-sm">
-                        <p className="text-slate-500 text-sm font-medium">{t("dashboard.stats.totalWords")}</p>
-                        <p className="text-2xl font-bold mt-1 text-slate-900 dark:text-slate-100">{userProgress.totalCards}</p>
+                {/* Header Section */}
+                {!isLoading && !error && userProgress && (
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10 mt-4">
+                        <div>
+                            <h2 className="text-4xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">{t("dashboard.myDecks")}</h2>
+                            <p className="mt-2 text-slate-500 dark:text-slate-400 max-w-md">
+                                {t("dashboard.learningActivity")}
+                            </p>
+                        </div>
+                        <Link
+                            href="/flashcard/create"
+                            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-slate-900 font-bold rounded-xl hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+                        >
+                            <span className="material-symbols-outlined">add_circle</span>
+                            <span>{t("dashboard.createDeck")}</span>
+                        </Link>
                     </div>
-                    <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-primary/5 shadow-sm">
-                        <p className="text-slate-500 text-sm font-medium">{t("dashboard.stats.wordsLearned")}</p>
-                        <p className="text-2xl font-bold mt-1 text-primary">{userProgress.reviewedCards}</p>
-                    </div>
-                    <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-primary/5 shadow-sm">
-                        <p className="text-slate-500 text-sm font-medium">{t("dashboard.stats.streak")}</p>
-                        <div className="flex items-center gap-2 mt-1 text-slate-900 dark:text-slate-100">
-                            <p className="text-2xl font-bold">{userProgress.streak} {t("dashboard.stats.days")}</p>
-                            <span className="material-symbols-outlined text-orange-400">local_fire_department</span>
+                )}
+
+                {/* Stats Overview */}
+                {!isLoading && userProgress && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+                        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-primary/5 shadow-sm">
+                            <p className="text-slate-500 text-sm font-medium">{t("dashboard.stats.totalWords")}</p>
+                            <p className="text-2xl font-bold mt-1 text-slate-900 dark:text-slate-100">{userProgress.totalCards}</p>
+                        </div>
+                        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-primary/5 shadow-sm">
+                            <p className="text-slate-500 text-sm font-medium">{t("dashboard.stats.wordsLearned")}</p>
+                            <p className="text-2xl font-bold mt-1 text-primary">{userProgress.reviewedCards}</p>
+                        </div>
+                        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-primary/5 shadow-sm">
+                            <p className="text-slate-500 text-sm font-medium">{t("dashboard.stats.streak")}</p>
+                            <div className="flex items-center gap-2 mt-1 text-slate-900 dark:text-slate-100">
+                                <p className="text-2xl font-bold">{userProgress.streak} {t("dashboard.stats.days")}</p>
+                                <span className="material-symbols-outlined text-orange-400">local_fire_department</span>
+                            </div>
+                        </div>
+                        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-primary/5 shadow-sm">
+                            <p className="text-slate-500 text-sm font-medium">{t("dashboard.stats.goal")}</p>
+                            <p className="text-2xl font-bold mt-1 text-slate-900 dark:text-slate-100">{userProgress.masteredProgressPercent}%</p>
                         </div>
                     </div>
-                    <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-primary/5 shadow-sm">
-                        <p className="text-slate-500 text-sm font-medium">{t("dashboard.stats.goal")}</p>
-                        <p className="text-2xl font-bold mt-1 text-slate-900 dark:text-slate-100">{userProgress.masteredProgressPercent}%</p>
+                )}
+
+
+
+                {!isLoading && !error && (
+                    <div className="mb-10">
+                        {!decks.length && <p className="mt-2 text-sm text-slate-600">{t("dashboard.emptyDecks")}</p>}
+
+                        {!!decks.length && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {decks.map((deck) => {
+                                    const stat = userProgress?.deckStats.find((item) => item.deckId === deck.id);
+                                    const progressPercent = stat?.progressPercent ?? 0;
+                                    const masteredPercent = stat?.masteredProgressPercent ?? 0;
+
+                                    return (
+                                        <div key={deck.id} className="group flex flex-col bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-primary/10 hover:border-primary/40 transition-all shadow-sm hover:shadow-xl">
+                                            <div className="h-40 bg-slate-100 dark:bg-slate-800 relative overflow-hidden">
+                                                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent"></div>
+                                                <div className="absolute inset-0 flex items-center justify-center opacity-20 group-hover:scale-110 transition-transform duration-500">
+                                                    <span className="material-symbols-outlined text-[80px]">school</span>
+                                                </div>
+                                                <div className="absolute bottom-4 left-4">
+                                                    <span className="px-3 py-1 bg-primary/90 text-slate-900 text-xs font-bold rounded-full">{deck.sheetName}</span>
+                                                </div>
+                                            </div>
+                                            <div className="p-6 flex-1 flex flex-col">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 line-clamp-1">{deck.name}</h3>
+                                                    <button
+                                                        onClick={() => void deleteDeck(deck.id, deck.name)}
+                                                        disabled={deletingDeckId === deck.id}
+                                                        className="text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
+                                                        title="Xoá bộ này"
+                                                    >
+                                                        <span className="material-symbols-outlined">delete</span>
+                                                    </button>
+                                                </div>
+                                                <p className="text-sm text-slate-500 mb-6 line-clamp-2 min-h-[40px]">
+                                                    {deck.description || t("dashboard.noDescription")}
+                                                </p>
+
+                                                <div className="space-y-3 mt-auto">
+                                                    <div className="flex justify-between text-sm font-medium">
+                                                        <span className="text-slate-500 line-clamp-1 flex-1 mr-2">{t("dashboard.stats.wordsLearned")}</span>
+                                                        <span className="text-primary truncate">{stat?.reviewedCards ?? 0} / {stat?.totalCards ?? deck.cardCount} {t("dashboard.deck.cards")}</span>
+                                                    </div>
+                                                    <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progressPercent}%` }}></div>
+                                                    </div>
+
+                                                    <div className="flex justify-between text-xs font-medium mt-1">
+                                                        <span className="text-slate-400 line-clamp-1 flex-1 mr-2">{t("dashboard.deck.progress")}</span>
+                                                        <span className="text-emerald-500 truncate">{stat?.masteredCards ?? 0} / {stat?.totalCards ?? deck.cardCount} ({masteredPercent}%)</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex gap-2 w-full mt-6">
+                                                    <Link href={`/flashcard/study/${deck.id}`} className="flex-1 py-3 bg-primary/10 hover:bg-primary text-primary hover:text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
+                                                        <span className="material-symbols-outlined">play_arrow</span>
+                                                        {t("dashboard.deck.studyNow")}
+                                                    </Link>
+                                                    <Link href={`/flashcard/practice/${deck.id}`} className="flex-1 py-3 bg-indigo-50 hover:bg-indigo-500 text-indigo-600 hover:text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
+                                                        <span className="material-symbols-outlined">edit_square</span>
+                                                        {t("dashboard.deck.practice")}
+                                                    </Link>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
-                </div>
-            )}
-
-
-
-            {!isLoading && !error && (
-                <div className="mb-10">
-                    {!decks.length && <p className="mt-2 text-sm text-slate-600">{t("dashboard.emptyDecks")}</p>}
-
-                    {!!decks.length && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {decks.map((deck) => {
-                                const stat = userProgress?.deckStats.find((item) => item.deckId === deck.id);
-                                const progressPercent = stat?.progressPercent ?? 0;
-                                const masteredPercent = stat?.masteredProgressPercent ?? 0;
-
-                                return (
-                                    <div key={deck.id} className="group flex flex-col bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-primary/10 hover:border-primary/40 transition-all shadow-sm hover:shadow-xl">
-                                        <div className="h-40 bg-slate-100 dark:bg-slate-800 relative overflow-hidden">
-                                            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent"></div>
-                                            <div className="absolute inset-0 flex items-center justify-center opacity-20 group-hover:scale-110 transition-transform duration-500">
-                                                <span className="material-symbols-outlined text-[80px]">school</span>
-                                            </div>
-                                            <div className="absolute bottom-4 left-4">
-                                                <span className="px-3 py-1 bg-primary/90 text-slate-900 text-xs font-bold rounded-full">{deck.sheetName}</span>
-                                            </div>
-                                        </div>
-                                        <div className="p-6 flex-1 flex flex-col">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 line-clamp-1">{deck.name}</h3>
-                                                <button 
-                                                    onClick={() => void deleteDeck(deck.id, deck.name)}
-                                                    disabled={deletingDeckId === deck.id}
-                                                    className="text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
-                                                    title="Xoá bộ này"
-                                                >
-                                                    <span className="material-symbols-outlined">delete</span>
-                                                </button>
-                                            </div>
-                                            <p className="text-sm text-slate-500 mb-6 line-clamp-2 min-h-[40px]">
-                                                {deck.description || t("dashboard.noDescription")}
-                                            </p>
-                                            
-                                            <div className="space-y-3 mt-auto">
-                                                <div className="flex justify-between text-sm font-medium">
-                                                    <span className="text-slate-500 line-clamp-1 flex-1 mr-2">{t("dashboard.stats.wordsLearned")}</span>
-                                                    <span className="text-primary truncate">{stat?.reviewedCards ?? 0} / {stat?.totalCards ?? deck.cardCount} {t("dashboard.deck.cards")}</span>
-                                                </div>
-                                                <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progressPercent}%` }}></div>
-                                                </div>
-                                                
-                                                <div className="flex justify-between text-xs font-medium mt-1">
-                                                    <span className="text-slate-400 line-clamp-1 flex-1 mr-2">{t("dashboard.deck.progress")}</span>
-                                                    <span className="text-emerald-500 truncate">{stat?.masteredCards ?? 0} / {stat?.totalCards ?? deck.cardCount} ({masteredPercent}%)</span>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="flex gap-2 w-full mt-6">
-                                                <Link href={`/flashcard/study/${deck.id}`} className="flex-1 py-3 bg-primary/10 hover:bg-primary text-primary hover:text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
-                                                    <span className="material-symbols-outlined">play_arrow</span>
-                                                    {t("dashboard.deck.studyNow")}
-                                                </Link>
-                                                <Link href={`/flashcard/practice/${deck.id}`} className="flex-1 py-3 bg-indigo-50 hover:bg-indigo-500 text-indigo-600 hover:text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
-                                                    <span className="material-symbols-outlined">edit_square</span>
-                                                    {t("dashboard.deck.practice")}
-                                                </Link>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            )}
-        </main>
+                )}
+            </main>
         </div>
     );
 }

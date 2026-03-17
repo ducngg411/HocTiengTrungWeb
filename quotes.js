@@ -1,4 +1,4 @@
-[
+const quotes = [
     { "text": "Thành công không phải là cuối cùng, thất bại không phải là chết chóc: đó là lòng can đảm để tiếp tục.", "author": "Winston Churchill" },
     { "text": "Đừng đợi đến khi mọi thứ hoàn hảo mới bắt đầu. Bắt đầu sẽ làm mọi thứ trở nên hoàn hảo.", "author": "Khuyết danh" },
     { "text": "Kỷ luật là cầu nối giữa mục tiêu và thành tựu.", "author": "Jim Rohn" },
@@ -49,4 +49,6 @@
     { "text": "Đừng để ngày hôm qua chiếm quá nhiều thời gian của ngày hôm nay.", "author": "Will Rogers" },
     { "text": "Mọi chuyện đều có vẻ bất khả thi cho đến khi nó được hoàn thành.", "author": "Nelson Mandela" },
     { "text": "Nghị lực và kiên trì sẽ chiến thắng tất cả.", "author": "Benjamin Franklin" }
-]
+];
+
+export default quotes;
