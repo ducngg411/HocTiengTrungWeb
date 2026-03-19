@@ -112,6 +112,9 @@ export const translations: Record<Language, TranslationDictionary> = {
             swipeLabel: "Chạm để lật thẻ xem nghĩa",
             btnHard: "Khó",
             btnEasy: "Dễ",
+            btnGoBack: "Quay lại",
+            btnGoForward: "Tiếp theo",
+            historyStepsBack: "bước trước",
             emptyModes: {
                 learn: "Chế độ Học tiếp đang trống. Bộ này không còn thẻ mới.",
                 hard: "Chế độ Thẻ khó đang trống. Chưa có thẻ nào bị đánh dấu khó.",
@@ -327,6 +330,9 @@ export const translations: Record<Language, TranslationDictionary> = {
             swipeLabel: "Tap to flip and reveal meaning",
             btnHard: "Hard",
             btnEasy: "Easy",
+            btnGoBack: "Go Back",
+            btnGoForward: "Forward",
+            historyStepsBack: "steps back",
             emptyModes: {
                 learn: "Learn mode is empty. No new cards left.",
                 hard: "Hard mode is empty. No cards marked as hard.",
@@ -542,6 +548,9 @@ export const translations: Record<Language, TranslationDictionary> = {
             swipeLabel: "点击翻转查看含义",
             btnHard: "困难",
             btnEasy: "容易",
+            btnGoBack: "返回",
+            btnGoForward: "前进",
+            historyStepsBack: "步前",
             emptyModes: {
                 learn: "学习模式为空。没有新卡片了。",
                 hard: "困难模式为空。没有被标记为困难的卡片。",

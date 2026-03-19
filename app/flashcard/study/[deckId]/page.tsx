@@ -205,6 +205,11 @@ export default function StudyDeckPage() {
     const [studyActive, setStudyActive] = useState(false);
     const [isViewingAll, setIsViewingAll] = useState(false);
 
+    // Navigation history — like browser Back/Forward
+    const [navHistory, setNavHistory] = useState<string[]>([]); // reviewed card IDs in order
+    const [historyPos, setHistoryPos] = useState<number>(-1);   // -1 = present, >=0 = viewing a past card
+    const [historyReturnIndex, setHistoryReturnIndex] = useState<number>(0);
+
     // Review sub-mode state
     const [reviewPanelOpen, setReviewPanelOpen] = useState(false);
     const [reviewOptions, setReviewOptions] = useState<ReviewOptionsResponse | null>(null);
@@ -345,12 +350,38 @@ export default function StudyDeckPage() {
     const safeIndex = useMemo(() => (hasCards ? index % activeCards.length : 0), [activeCards.length, hasCards, index]);
     const currentCard = hasCards ? activeCards[safeIndex] : null;
 
+    // The card actually shown — may be a history card when navigating back
+    const historyViewCard = historyPos >= 0 ? (cards.find((c) => c.id === navHistory[historyPos]) ?? null) : null;
+    const displayCard = historyViewCard ?? currentCard;
+
+    const canGoBack = historyPos === -1 ? navHistory.length > 0 : historyPos > 0;
+    const canGoForward = historyPos !== -1;
+
     useEffect(() => {
         currentCardStartedAtRef.current = Date.now();
-    }, [safeIndex, selectedMode]);
+    }, [safeIndex, selectedMode, historyPos]);
 
     const nextCard = () => { if (hasCards) setIndex((prev) => prev + 1); };
     const previousCard = () => { if (hasCards) setIndex((prev) => (prev - 1 + activeCards.length) % activeCards.length); };
+
+    const goBack = useCallback(() => {
+        if (historyPos === -1) {
+            if (navHistory.length === 0) return;
+            setHistoryReturnIndex(safeIndex);
+            setHistoryPos(navHistory.length - 1);
+        } else if (historyPos > 0) {
+            setHistoryPos((p) => p - 1);
+        }
+    }, [historyPos, navHistory, safeIndex]);
+
+    const goForward = useCallback(() => {
+        if (historyPos === -1) return;
+        if (historyPos < navHistory.length - 1) {
+            setHistoryPos((p) => p + 1);
+        } else {
+            setHistoryPos(-1);
+        }
+    }, [historyPos, navHistory.length]);
 
     const startSession = useCallback(async (
         mode: StudyMode,
@@ -394,6 +425,9 @@ export default function StudyDeckPage() {
         currentCardStartedAtRef.current = Date.now();
         setStudyActive(true);
         setReviewPanelOpen(false);
+        setNavHistory([]);
+        setHistoryPos(-1);
+        setHistoryReturnIndex(0);
 
         // Calculate the card IDs going into this session
         const plannedCards = getActiveCardsForMode(cards, mode, seed, reviewOptions);
@@ -416,10 +450,16 @@ export default function StudyDeckPage() {
         setSessionId(null);
         sessionIdRef.current = null;
         setStudyActive(false);
+        setNavHistory([]);
+        setHistoryPos(-1);
+        setHistoryReturnIndex(0);
     }, [endCurrentSession]);
 
     const submitReview = async (action: ReviewAction) => {
-        if (!username || !deckId || !currentCard) return;
+        const cardToReview = displayCard;
+        if (!username || !deckId || !cardToReview) return;
+
+        const isInHistoryMode = historyPos >= 0;
 
         setIsSubmittingReview(true);
         setError(null);
@@ -433,7 +473,7 @@ export default function StudyDeckPage() {
                 body: JSON.stringify({
                     username,
                     deckId,
-                    cardId: currentCard.id,
+                    cardId: cardToReview.id,
                     action,
                     studySeconds: elapsedSeconds,
                     sessionId: sessionId ?? undefined,
@@ -454,18 +494,26 @@ export default function StudyDeckPage() {
                     : item
             );
 
-            const nextActiveCards = getActiveCardsForMode(nextCards, selectedMode, randomSeed, reviewOptions);
-            const nextIndex = (() => {
-                if (!nextActiveCards.length) return 0;
-                if (selectedMode === "learn") return Math.min(safeIndex, nextActiveCards.length - 1);
-                if (selectedMode === "hard" && payload.status !== currentCard.progress.status) return Math.min(safeIndex, nextActiveCards.length - 1);
-                return (safeIndex + 1) % nextActiveCards.length;
-            })();
-
             setCards(nextCards);
             setSessionReviewedCards((prev) => Math.min(prev + 1, sessionTotalCards));
             await loadProgressData(username, deckId);
-            setIndex(nextIndex);
+
+            if (isInHistoryMode) {
+                // Return to where we were before going back
+                setHistoryPos(-1);
+                setIndex(historyReturnIndex);
+            } else {
+                // Normal flow: push card to history, then advance
+                setNavHistory((prev) => [...prev, cardToReview.id]);
+                const nextActiveCards = getActiveCardsForMode(nextCards, selectedMode, randomSeed, reviewOptions);
+                const nextIndex = (() => {
+                    if (!nextActiveCards.length) return 0;
+                    if (selectedMode === "learn") return Math.min(safeIndex, nextActiveCards.length - 1);
+                    if (selectedMode === "hard" && payload.status !== cardToReview.progress.status) return Math.min(safeIndex, nextActiveCards.length - 1);
+                    return (safeIndex + 1) % nextActiveCards.length;
+                })();
+                setIndex(nextIndex);
+            }
         } catch (requestError) {
             setError(requestError instanceof Error ? requestError.message : t("common.error"));
         } finally {
@@ -688,17 +736,54 @@ export default function StudyDeckPage() {
                     {/* Active Study View */}
                     {!isLoading && !error && studyActive && (
                         <main className="flex-1 flex flex-col items-center justify-center px-4 py-4 lg:px-6 relative overflow-y-auto">
-                            {currentCard ? (
+                            {displayCard ? (
                                 <div className="w-full max-w-xs sm:max-w-sm lg:max-w-md flex flex-col items-center gap-6 py-4">
                                     <Flashcard
-                                        key={`${selectedMode}-${currentCard.id}-${safeIndex}`}
-                                        item={currentCard.content}
-                                        progress={currentCard.progress}
+                                        key={`${selectedMode}-${displayCard.id}-${historyPos === -1 ? safeIndex : historyPos}`}
+                                        item={displayCard.content}
+                                        progress={displayCard.progress}
                                         onNext={nextCard}
                                         onSwipeLeft={() => void submitReview("hard")}
                                         onSwipeRight={() => void submitReview("easy")}
                                         isFlippingDisabled={isSubmittingReview}
                                     />
+
+                                    {/* Navigation History Controls */}
+                                    <div className="w-full flex items-center justify-center gap-3 -mt-2">
+                                        <button
+                                            type="button"
+                                            onClick={goBack}
+                                            disabled={!canGoBack || isSubmittingReview}
+                                            title={t("study.btnGoBack")}
+                                            className="flex flex-col items-center gap-1 group disabled:opacity-30 transition-opacity"
+                                        >
+                                            <div className="h-9 w-9 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 border border-slate-200 dark:border-slate-600 group-hover:bg-slate-200 dark:group-hover:bg-slate-600 group-active:scale-90 transition-all shadow-sm">
+                                                <span className="material-symbols-outlined text-lg">undo</span>
+                                            </div>
+                                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t("study.btnGoBack")}</span>
+                                        </button>
+
+                                        {canGoForward && (
+                                            <button
+                                                type="button"
+                                                onClick={goForward}
+                                                disabled={isSubmittingReview}
+                                                title={t("study.btnGoForward")}
+                                                className="flex flex-col items-center gap-1 group disabled:opacity-30 transition-opacity"
+                                            >
+                                                <div className="h-9 w-9 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 border border-slate-200 dark:border-slate-600 group-hover:bg-slate-200 dark:group-hover:bg-slate-600 group-active:scale-90 transition-all shadow-sm">
+                                                    <span className="material-symbols-outlined text-lg">redo</span>
+                                                </div>
+                                                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t("study.btnGoForward")}</span>
+                                            </button>
+                                        )}
+
+                                        {historyPos >= 0 && (
+                                            <span className="text-xs text-slate-400 font-medium px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded-full border border-slate-200 dark:border-slate-600">
+                                                {navHistory.length - historyPos} {t("study.historyStepsBack")}
+                                            </span>
+                                        )}
+                                    </div>
 
                                     {/* Learning Controls */}
                                     <div className="w-full flex items-center justify-between gap-6 pb-2">
@@ -715,7 +800,7 @@ export default function StudyDeckPage() {
                                         </button>
 
                                         <button
-                                          type="button"
+                                            type="button"
                                             onClick={() => void submitReview("easy")}
                                             disabled={isSubmittingReview}
                                             className="flex flex-1 flex-col items-center gap-2 group disabled:opacity-50"
